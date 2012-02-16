@@ -15,7 +15,9 @@
  *     along with FastVoxel.  If not, see <http://www.gnu.org/licenses/>.
  * FastVoxel is a voxelisation library of polygonal 3d model and do volumes identifications.
  * It is dedicated to finite element solvers
- * @author Nicolas Fortin , Judicaël Picaut judicael.picaut (home) ifsttar.fr
+ * @author Nicolas Fortin
+ * This project is the production of IFSTTAR (www.ifsttar.fr)
+ * @copyright GNU Public License.V3
  * Official repository is https://github.com/nicolas-f/FastVoxel
  */
 #include "spatial_discretization.hpp"

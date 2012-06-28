@@ -1,18 +1,41 @@
-/*
- *     This file is part of FastVoxel.
+/***************************************************************************
+ * Mathlib
  *
- *     FastVoxel is free software: you can redistribute it and/or modify
- *     it under the terms of the GNU General Public License as published by
- *     the Free Software Foundation, either version 3 of the License, or
- *     (at your option) any later version.
+ * Copyright (C) 2003-2004, Alexander Zaprjagaev <frustum@frustum.org>
  *
- *     FastVoxel is distributed in the hope that it will be useful,
- *     but WITHOUT ANY WARRANTY; without even the implied warranty of
- *     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *     GNU General Public License for more details.
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
  *
- *    You should have received a copy of the GNU General Public License
- *     along with FastVoxel.  If not, see <http://www.gnu.org/licenses/>.
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * 
+ ***************************************************************************
+ * Update 2004/08/19
+ *
+ * added ivec2, ivec3 & ivec4 methods
+ * vec2, vec3 & vec4 data : added texture coords (s,t,p,q) and color enums (r,g,b,a)
+ * mat3 & mat4 : added multiple float constructor ad modified methods returning mat3 or mat4
+ * optimisations like "x / 2.0f" replaced by faster "x * 0.5f"
+ * defines of multiples usefull maths values and radian/degree conversions
+ * vec2 : added methods : set, reset, compare, dot, closestPointOnLine, closestPointOnSegment,
+ *                        projectionOnLine, lerp, angle
+ * vec3 : added methods : set, reset, compare, dot, cross, closestPointOnLine, closestPointOnSegment,
+ *                        projectionOnLine, lerp, angle
+ * vec4 : added methods : set, reset, compare
+ ***************************************************************************
+ */
+
+
+/**
+ * 2011 Edited, add some function and typedef, templates
  * FastVoxel is a voxelisation library of polygonal 3d model and do volumes identifications.
  * It is dedicated to finite element solvers
  * @author Nicolas Fortin , Judicael Picaut judicael.picaut (home) ifsttar.fr

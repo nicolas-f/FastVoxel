@@ -106,17 +106,17 @@ set(FASTVOXEL_RESSOURCES ${PROJECT_SOURCE_DIR}/fastvoxel)
 
 # Adds logic to INSTALL.vcproj to copy _fastvoxel.pyd to the destination directory
 install (TARGETS ${SWIG_MODULE_fastvoxel_REAL_NAME}
-      LIBRARY DESTINATION libfastvoxel/
+      LIBRARY DESTINATION fastvoxel/
 )
 
 if( CMAKE_INSTALL_SYSTEM_RUNTIME_LIBS )
-    install( PROGRAMS ${CMAKE_INSTALL_SYSTEM_RUNTIME_LIBS} DESTINATION libfastvoxel COMPONENT System )
+    install( PROGRAMS ${CMAKE_INSTALL_SYSTEM_RUNTIME_LIBS} DESTINATION fastvoxel COMPONENT System )
 endif( CMAKE_INSTALL_SYSTEM_RUNTIME_LIBS )
 
 install (FILES
         ${FASTVOXEL_RESSOURCES}/__init__.py
 		${CMAKE_CURRENT_BINARY_DIR}/fastvoxel.py
-        DESTINATION libfastvoxel/)
+        DESTINATION fastvoxel/)
         
         
 

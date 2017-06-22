@@ -28,9 +28,9 @@
 * or write to scientific.computing@ifsttar.fr
 * ----------------------------------------------------------------------*/
 
+#include <cmath>
 #include "std_tools.hpp"
-#include <math.h>
-#include <float.h>
+
 
 bool st_isfinite(const float& value)
 {

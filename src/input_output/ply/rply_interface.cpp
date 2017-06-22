@@ -1,29 +1,35 @@
-/*
- *     This file is part of FastVoxel.
- *
- *     FastVoxel is free software: you can redistribute it and/or modify
- *     it under the terms of the GNU General Public License as published by
- *     the Free Software Foundation, either version 3 of the License, or
- *     (at your option) any later version.
- *
- *     FastVoxel is distributed in the hope that it will be useful,
- *     but WITHOUT ANY WARRANTY; without even the implied warranty of
- *     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *     GNU General Public License for more details.
- *
- *    You should have received a copy of the GNU General Public License
- *     along with FastVoxel.  If not, see <http://www.gnu.org/licenses/>.
- * FastVoxel is a voxelisation library of polygonal 3d model and do volumes identifications.
- * It is dedicated to finite element solvers
- * @author Nicolas Fortin
- * This project is the production of IFSTTAR (www.ifsttar.fr)
- * @copyright GNU Public License.V3
- * Official repository is https://github.com/nicolas-f/FastVoxel
- */
+/* ----------------------------------------------------------------------
+* I-SIMPA (http://i-simpa.ifsttar.fr). This file is part of I-SIMPA.
+*
+* I-SIMPA is a GUI for 3D numerical sound propagation modelling dedicated
+* to scientific acoustic simulations.
+* Copyright (C) 2007-2014 - IFSTTAR - Judicael Picaut, Nicolas Fortin
+*
+* I-SIMPA is free software; you can redistribute it and/or modify
+* it under the terms of the GNU General Public License as published by
+* the Free Software Foundation; either version 3 of the License, or
+* (at your option) any later version.
+* 
+* I-SIMPA is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+* GNU General Public License for more details.
+* 
+* You should have received a copy of the GNU General Public License
+* along with this program; if not, write to the Free Software Foundation,
+* Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA or 
+* see <http://ww.gnu.org/licenses/>
+*
+* For more information, please consult: <http://i-simpa.ifsttar.fr> or 
+* send an email to i-simpa@ifsttar.fr
+*
+* To contact Ifsttar, write to Ifsttar, 14-20 Boulevard Newton
+* Cite Descartes, Champs sur Marne F-77447 Marne la Vallee Cedex 2 FRANCE
+* or write to scientific.computing@ifsttar.fr
+* ----------------------------------------------------------------------*/
 
 #include "rply_interface.hpp"
 #include "rply.h"
-#include "en_numeric.hpp"
 
 namespace formatRPLY
 {
@@ -31,7 +37,7 @@ namespace formatRPLY
 	{
 		parsing_instance(t_model& _currentModel):currentModel(_currentModel),lastFaceSplited(false) {}
 		t_model& currentModel;
-		bool lastFaceSplited; /*!< La dernière face avait 4 sommets et a été éclaté en deux triangles */
+		bool lastFaceSplited; /*!< La derniï¿½re face avait 4 sommets et a ï¿½tï¿½ ï¿½clatï¿½ en deux triangles */
 	};
 
 
@@ -63,20 +69,30 @@ namespace formatRPLY
 		parsing_instance* curInstance((parsing_instance*)ptr);
 		t_model* model=&(curInstance->currentModel);
 		switch (idvert) {
+			case -1:
+				// This is the vertex count
+				// int vCount = (int)ply_get_argument_value(argument);
+				break;
 			case 0:
 				curInstance->lastFaceSplited=false;
 				model->modelFaces.push_back(t_face(ivec3((int)ply_get_argument_value(argument),0,0)));
 				break;
 			case 1:
 			case 2:
-				model->modelFaces.back().indicesSommets[idvert]=(int)ply_get_argument_value(argument);
+				model->modelFaces.back().indicesSommets.set((int) idvert, (long) ply_get_argument_value(argument));
 				break;
-			case 3:
-				//Polygone à quatre sommets
-				const ivec3& lastTri(model->modelFaces.back().indicesSommets);
-				model->modelFaces.push_back(t_face(ivec3(lastTri[0],lastTri[2],(int)ply_get_argument_value(argument))));
-				curInstance->lastFaceSplited=true;
-				break;
+			case 3: {
+                // Polygon with 4 vertices
+				// Push an additional triangle
+                const ivec3 &lastTri(model->modelFaces.back().indicesSommets);
+                model->modelFaces.push_back(
+                        t_face(ivec3(lastTri.i[0], lastTri.i[2], (int) ply_get_argument_value(argument))));
+                curInstance->lastFaceSplited = true;
+                break;
+            }
+			default:
+				// unhandled case for the moment
+				fprintf(stderr, "Unhandled polygon with %li vertices\n", idvert);
 		}
 		return 1;
 	}
@@ -85,9 +101,9 @@ namespace formatRPLY
 		ply_get_argument_user_data(argument, &ptr, NULL);
 		parsing_instance* curInstance((parsing_instance*)ptr);
 		t_model* model=&(curInstance->currentModel);
-		model->modelFacesLayerIndex.push_back((int)ply_get_argument_value(argument));
+		model->modelFacesLayerIndex.push_back((std::size_t) ply_get_argument_value(argument));
 		if(curInstance->lastFaceSplited)
-			model->modelFacesLayerIndex.push_back((int)ply_get_argument_value(argument));
+			model->modelFacesLayerIndex.push_back((std::size_t) ply_get_argument_value(argument));
 		return 1;
 	}
 
@@ -100,10 +116,10 @@ namespace formatRPLY
 		t_model* model=&(curInstance->currentModel);
 		if(idchar==-1)
 		{
-			std::size_t sizeOfString((int)ply_get_argument_value(argument));
+			std::size_t sizeOfString((std::size_t) ply_get_argument_value(argument));
 			model->modelLayers.push_back(std::string(sizeOfString,' '));
 		}else{
-			model->modelLayers.back().layerName.replace(idchar,1,1,(unsigned char)ply_get_argument_value(argument));
+			model->modelLayers.back().layerName.replace((std::size_t) idchar, 1, 1, (unsigned char)ply_get_argument_value(argument));
 		}
 		return 1;
 	}
@@ -127,11 +143,9 @@ namespace formatRPLY
 
 	bool CPly::ImportPly(t_model& sceneconst, std::string mfilename)
 	{
-		EnglishTemporaryLocale dotNumericOnly;
-
 		sceneconst.modelFaces.clear();
 		sceneconst.modelVertices.clear();
-		p_ply plyFile=ply_open(mfilename.c_str(),NULL);
+		p_ply plyFile=ply_open(mfilename.c_str(),NULL, 0, NULL);
 		if(!plyFile)
 			return false;
 		CloseHandle plyCloseObj(plyFile);
@@ -158,9 +172,8 @@ namespace formatRPLY
 
 	bool CPly::ExportPly(t_model& scene, std::string mfilename)
 	{
-		EnglishTemporaryLocale dotNumericOnly;
 		p_ply oply;
-		oply = ply_create(mfilename.c_str(), PLY_BIG_ENDIAN, NULL);
+		oply = ply_create(mfilename.c_str(), PLY_BIG_ENDIAN, NULL, 0, NULL);
 		if (!oply) return false;
 		CloseHandle plyCloseObj(oply);
 		std::size_t faceCount(scene.modelFaces.size());

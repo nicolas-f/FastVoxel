@@ -49,7 +49,7 @@ namespace formatRPLY
 		t_model* model=&(curInstance->currentModel);
 		switch (plane) {
 			case 0:
-				model->modelVertices.push_back(vec3(ply_get_argument_value(argument),0,0));
+                model->modelVertices.push_back(dvec3(ply_get_argument_value(argument),0,0));
 				break;
 			case 1:
 				model->modelVertices.back().y=ply_get_argument_value(argument);
@@ -198,7 +198,7 @@ namespace formatRPLY
 			ply_add_list_property(oply,"layer_name",PLY_UCHAR, PLY_UCHAR );
 		}
 		ply_write_header(oply);
-		for(std::list<vec3>::iterator itvert=scene.modelVertices.begin();itvert!=scene.modelVertices.end();itvert++)
+        for(std::list<dvec3>::iterator itvert=scene.modelVertices.begin();itvert!=scene.modelVertices.end();itvert++)
 		{
 			ply_write(oply,itvert->x);
 			ply_write(oply,itvert->y);

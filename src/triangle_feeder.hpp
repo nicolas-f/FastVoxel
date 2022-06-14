@@ -43,7 +43,7 @@ public:
   * @param C Coordinate of the vertex C
   * @param marker Marker of the triangle. [0-32768]
   */
- void SecondStep_PushTri(const vec3& A,const vec3& B,const vec3& C,const SpatialDiscretization::weight_t& marker=1);
+ void SecondStep_PushTri(const dvec3& A,const dvec3& B,const dvec3& C,const SpatialDiscretization::weight_t& marker=1);
  bool LoadPlyModel(const std::string& fileInput);
 };
 

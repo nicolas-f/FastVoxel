@@ -1,3 +1,4 @@
+#include <math.h>
 
 #ifndef __OCTREE44_TRIELEMENT_H__
 #define __OCTREE44_TRIELEMENT_H__
@@ -10,7 +11,7 @@
  */
 namespace boxtri_test
 {
-	int triBoxOverlap(float boxcenter[3],float boxhalfsize[3],float triverts[3][3]);
+    int triBoxOverlap(double_t boxcenter[3],double_t boxhalfsize[3],double_t triverts[3][3]);
 }
 
 #endif

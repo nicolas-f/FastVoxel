@@ -73,7 +73,7 @@ namespace formatRPLY
 	struct t_model
 	{
 		std::list<t_face> modelFaces;
-		std::list<vec3> modelVertices;
+        std::list<dvec3> modelVertices;
 		std::list<t_layer> modelLayers;				 /*!< Liste des calques */
 		std::list<std::size_t> modelFacesLayerIndex; /*!< Correspondance Indice de Face->Indice de calque*/
 	};

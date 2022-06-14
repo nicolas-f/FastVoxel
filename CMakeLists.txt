@@ -144,7 +144,7 @@ install (FILES
 		${CMAKE_CURRENT_BINARY_DIR}/fastvoxel.py
         DESTINATION fastvoxel/)
         
-        
+add_executable(fastvoxel ${FASTVOXEL_SOURCES})
 
 if(WIN32)
     #install(CODE "

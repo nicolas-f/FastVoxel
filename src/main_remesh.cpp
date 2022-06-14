@@ -35,7 +35,7 @@
 #include <string.h>
 #include <stdio.h>
 /**
- * Cette méthode permet le tirage aléatoire d'un nombre décimal
+ * Cette mÃ©thode permet le tirage alÃ©atoire d'un nombre dÃ©cimal
  * Return a float random number
  * @return Decimal from 0 to 1
  */
@@ -160,7 +160,7 @@ int MainRemesh(int argc, char* argv[])
 	  PrintUsage(argc,argv);
 	  return -2;
 	}
-	vec3 minBoundingBox,maxBoundingBox;
+    dvec3 minBoundingBox,maxBoundingBox;
 
 
 	//Init the bounding box of the model
@@ -170,10 +170,10 @@ int MainRemesh(int argc, char* argv[])
 		return -2;
 
 	minBoundingBox=(*model3D.modelVertices.begin());
-	maxBoundingBox=(*model3D.modelVertices.begin());
-	std::vector<vec3> vertices_vec;
+    maxBoundingBox=(*model3D.modelVertices.begin());
+    std::vector<dvec3> vertices_vec;
 	vertices_vec.reserve(model3D.modelVertices.size());
-	for(std::list<vec3>::iterator itvert=model3D.modelVertices.begin();itvert!=model3D.modelVertices.end();itvert++)
+    for(std::list<dvec3>::iterator itvert=model3D.modelVertices.begin();itvert!=model3D.modelVertices.end();itvert++)
 	{
 		MAXVEC(maxBoundingBox,(*itvert));
 		MINVEC(minBoundingBox,(*itvert));
@@ -181,13 +181,16 @@ int MainRemesh(int argc, char* argv[])
 	}
 	model3D.modelVertices.clear();
 
+    if(verbose) {
+        std::cout<<"Model bouding box ["<< minBoundingBox.x << ","<< minBoundingBox.y<<","<< minBoundingBox.z<<"] to ["<< maxBoundingBox.x << ","<< maxBoundingBox.y<<","<< maxBoundingBox.z<<"]" <<  std::endl;
+    }
 
     //init the cell size, corresponding to specified arguments and bounding box
 	if(precision==0 && d==0)
 		d=5;
 	if(d!=0)
 	{
-		vec3 axesPrecision=(maxBoundingBox-minBoundingBox)/vec3((decimal)pow((decimal)2,(int)d),(decimal)pow((decimal)2,(int)d),(decimal)pow((decimal)2,(int)d));
+        dvec3 axesPrecision=(maxBoundingBox-minBoundingBox)/dvec3(pow(2,(double_t)d), pow(2.0 ,(double_t)d), pow(2.0 ,(double_t)d));
 		precision=MAX(axesPrecision.x,MAX(axesPrecision.z,axesPrecision.y));
 	}
 	std::cout<<"Discretization of space with a "<<precision<<" m cell width"<<std::endl;
@@ -298,7 +301,7 @@ int main(int argc, char* argv[])
 	int ret(MainRemesh(argc,argv));
 
     #ifdef _DEBUG
-		_CrtDumpMemoryLeaks(); //Affiche les fuites mémoires
+		_CrtDumpMemoryLeaks(); //Affiche les fuites mï¿½moires
 	#endif
 
 	return ret;

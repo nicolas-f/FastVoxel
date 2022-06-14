@@ -41,10 +41,10 @@ namespace boxtri_test
 	  if(x2<min) min=x2;\
 	  if(x2>max) max=x2;
 
-	int planeBoxOverlap(float normal[3],float d, float maxbox[3])
+    int planeBoxOverlap(double_t normal[3],double_t d, double_t maxbox[3])
 	{
 	  int q;
-	  float vmin[3],vmax[3];
+      double_t vmin[3],vmax[3];
 	  for(q=X;q<=Z;q++)
 	  {
 		if(normal[q]>0.0f)
@@ -111,7 +111,7 @@ namespace boxtri_test
 		rad = fa * boxhalfsize[X] + fb * boxhalfsize[Y];   \
 		if(min>rad || max<-rad) return 0;
 
-	int triBoxOverlap(float boxcenter[3],float boxhalfsize[3],float triverts[3][3])
+    int triBoxOverlap(double_t boxcenter[3],double_t boxhalfsize[3],double_t triverts[3][3])
 	{
 
 	  /*    use separating axis theorem to test overlap between triangle and box */
@@ -121,10 +121,10 @@ namespace boxtri_test
 	  /*    2) normal of the triangle */
 	  /*    3) crossproduct(edge from tri, {x,y,z}-directin) */
 	  /*       this gives 3x3=9 more tests */
-	   float v0[3],v1[3],v2[3];
-	   float axis[3];
-	   float min,max,d,p0,p1,p2,rad,fex,fey,fez;
-	   float normal[3],e0[3],e1[3],e2[3];
+       double_t v0[3],v1[3],v2[3];
+       double_t axis[3];
+       double_t min,max,d,p0,p1,p2,rad,fex,fey,fez;
+       double_t normal[3],e0[3],e1[3],e2[3];
 
 	   /* This is the fastest branch on Sun */
 	   /* move everything so that the boxcenter is in (0,0,0) */

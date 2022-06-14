@@ -39,43 +39,43 @@
 namespace core_mathlib
 {
 
-    %rename(vec3) base_vec3<decimal>;
+    %rename(dvec3) base_vec3<double_t>;
 
-    class vec3 {
+    class dvec3 {
     public:
-        vec3(void);
-        vec3(const float& _x,const float& _y,const float& _z);
-        vec3(const vec3 &_v);
-        int operator==(const vec3 &_v);
-        int operator!=(const vec3 &_v);
-        const vec3 operator*(float _f)const;
-        const vec3 operator/(float _f) const;
-        vec3 operator/(const vec3 &_v) const;
-        float length(void) const;
-        const vec3 operator+(const vec3 &_v) const;
-        const vec3 operator-() const;
-        const vec3 operator-(const vec3 &_v) const;
-        vec3 &operator*=(float _f);
-        vec3 &operator/=(float _f);
-        vec3 &operator+=(const vec3 &_v);
-        vec3 &operator-=(const vec3 &_v);
-        float operator*(const vec3 &_v) const;
-        bool barelyEqual(const vec3 &_v) const;
-        void set(float _x,float _y,float _z);
+        dvec3(void);
+        dvec3(const double& _x,const double& _y,const double& _z);
+        dvec3(const dvec3 &_v);
+        int operator==(const dvec3 &_v);
+        int operator!=(const dvec3 &_v);
+        const dvec3 operator*(double _f)const;
+        const dvec3 operator/(double _f) const;
+        dvec3 operator/(const dvec3 &_v) const;
+        double length(void) const;
+        const dvec3 operator+(const dvec3 &_v) const;
+        const dvec3 operator-() const;
+        const dvec3 operator-(const dvec3 &_v) const;
+        dvec3 &operator*=(double _f);
+        dvec3 &operator/=(double _f);
+        dvec3 &operator+=(const dvec3 &_v);
+        dvec3 &operator-=(const dvec3 &_v);
+        float operator*(const dvec3 &_v) const;
+        bool barelyEqual(const dvec3 &_v) const;
+        void set(double _x,double _y,double _z);
         void reset(void);
-        float normalize(void);
-        void cross(const vec3 &v1,const vec3 &v2);
-        void cross(const vec3 &v2);
-        float cosinus(const vec3 &ac);
-        float dot(const vec3 &v) const;
-        bool compare(const vec3 &_v,float epsi=EPSILON);
-        float angle(const vec3 &v)  const;
-        vec3 closestPointOnLine(const vec3 &vA, const vec3 &vB);
-        vec3 closestPointOnSegment(const vec3 &vA, const vec3 &vB);
-        float projectionOnLine(const vec3 &vA, const vec3 &vB);
-        vec3 lerp(vec3 &u, vec3 &v, float factor);
-        double distance(const vec3& a_vector) const;
-        vec3 Rotation(const vec3 &n,const float &angle) const;
+        double normalize(void);
+        void cross(const dvec3 &v1,const dvec3 &v2);
+        void cross(const dvec3 &v2);
+        double cosinus(const dvec3 &ac);
+        double dot(const dvec3 &v) const;
+        bool compare(const dvec3 &_v,double epsi=EPSILON);
+        double angle(const dvec3 &v)  const;
+        dvec3 closestPointOnLine(const dvec3 &vA, const dvec3 &vB);
+        dvec3 closestPointOnSegment(const dvec3 &vA, const dvec3 &vB);
+        double projectionOnLine(const dvec3 &vA, const dvec3 &vB);
+        dvec3 lerp(dvec3 &u, dvec3 &v, double factor);
+        double distance(const dvec3& a_vector) const;
+        dvec3 Rotation(const dvec3 &n,const double &angle) const;
 
         %extend {
             char *__str__() {
@@ -91,7 +91,7 @@ namespace core_mathlib
             int __len__() {
                 return 3;
             }
-            float __getitem__(const int& ind)
+            double __getitem__(const int& ind)
             {
                 return $self->v[ind];
             }
@@ -125,12 +125,12 @@ namespace core_mathlib
             %extend {
             char *__str__() {
                 static char temp[256];
-                sprintf(temp,"[ %i, %i, %i ]", $self->a,$self->b,$self->c);
+                sprintf(temp,"[ %li, %li, %li ]", $self->a,$self->b,$self->c);
                 return &temp[0];
             }
             char *__repr__() {
                 static char temp[256];
-                sprintf(temp,"vec3(%i,%i,%i)", $self->a,$self->b,$self->c);
+                sprintf(temp,"vec3(%li,%li,%li)", $self->a,$self->b,$self->c);
                 return &temp[0];
             }
             int __len__() {
@@ -150,19 +150,19 @@ namespace ScalarFieldBuilders
     class ScalarFieldCreator
 	{
         public:
-            ScalarFieldCreator(const float& resolution);
+            ScalarFieldCreator(const double& resolution);
             %rename(first_step_params) FirstStep_Params;
-            void FirstStep_Params(const vec3& boxMin,const vec3& boxMax);
+            void FirstStep_Params(const dvec3& boxMin,const dvec3& boxMax);
             %rename(third_step_volumescreator) ThirdStep_VolumesCreator;
             void ThirdStep_VolumesCreator();
             %rename(get_volume_value) GetVolumeValue;
-            float GetVolumeValue(short volId);
+            double GetVolumeValue(short volId);
             %rename(get_volume_count) GetVolumeCount;
             short GetVolumeCount();
             %rename(get_center_cell_coordinates) GetCenterCellCoordinates;
-            vec3 GetCenterCellCoordinates( ivec3 cell_id) const;
+            dvec3 GetCenterCellCoordinates( ivec3 cell_id) const;
             %rename(get_cell_id_by_coord) GetCellIdByCoord;
-            ivec3 GetCellIdByCoord(const vec3& position);
+            ivec3 GetCellIdByCoord(const dvec3& position);
             %rename(get_matrix_value) GetMatrixValue;
             short GetMatrixValue(const ivec3& index);
             %rename(get_domain_size) GetDomainSize;
@@ -179,9 +179,9 @@ namespace ScalarFieldBuilders
     class TriangleScalarFieldCreator : public ScalarFieldCreator
     {
         public:
-            TriangleScalarFieldCreator(const float& _resolution);
+            TriangleScalarFieldCreator(const double& _resolution);
             %rename(second_step_pushtri) SecondStep_PushTri;
-            void SecondStep_PushTri(const vec3& A,const vec3& B,const vec3& C,const short& marker=1);
+            void SecondStep_PushTri(const dvec3& A,const dvec3& B,const dvec3& C,const short& marker=1);
             %rename(load_ply_model) LoadPlyModel;
             bool LoadPlyModel(const std::string& fileInput);
     };

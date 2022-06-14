@@ -46,12 +46,12 @@ namespace ScalarFieldBuilders
 		#define MAX(a, b)  (((a) > (b)) ? (a) : (b))
 	#endif
 
-	vec3 CellIdToCenterCoordinate( const ivec3& cell_id, const decimal& cellSize, const vec3& zeroCellCenter)
+    dvec3 CellIdToCenterCoordinate( const ivec3& cell_id, const double_t& cellSize, const dvec3& zeroCellCenter)
 	{
-		return  zeroCellCenter+vec3(cellSize*cell_id.x,cellSize*cell_id.y,cellSize*cell_id.z);
+        return  zeroCellCenter+dvec3(cellSize*cell_id.x,cellSize*cell_id.y,cellSize*cell_id.z);
 	}
 
-	ScalarFieldCreator::ScalarFieldCreator(const decimal& _resolution)
+    ScalarFieldCreator::ScalarFieldCreator(const double_t& _resolution)
 		:resolution(_resolution)
 	{
 
@@ -61,9 +61,9 @@ namespace ScalarFieldBuilders
 	ScalarFieldCreator::~ScalarFieldCreator()
 	{
 	}
-	void ScalarFieldCreator::ComputeMatrixParams(const vec3& boxMin,const vec3& boxMax, const decimal& minResolution, mainVolumeConstruction_t& computedVolumeInfo)
+    void ScalarFieldCreator::ComputeMatrixParams(const dvec3& boxMin,const dvec3& boxMax, const double_t& minResolution, mainVolumeConstruction_t& computedVolumeInfo)
 	{
-		vec3 boxsize=boxMax-boxMin;
+        dvec3 boxsize=boxMax-boxMin;
 		ivec3 cellCount=ivec3((long)ceil(boxsize.x/minResolution),(long)ceil(boxsize.y/minResolution),(long)ceil(boxsize.z/minResolution));
 
 		computedVolumeInfo.boxMin=boxMin;
@@ -71,14 +71,14 @@ namespace ScalarFieldBuilders
 		computedVolumeInfo.cellCount=MAX(MAX(cellCount.x,cellCount.y),cellCount.z);
 		computedVolumeInfo.mainVolumeCenter=(boxMax+boxMin)/2.f;
 		computedVolumeInfo.cellSize=MAX(MAX(boxsize.x,boxsize.y),boxsize.z)/computedVolumeInfo.cellCount;
-		computedVolumeInfo.cellHalfSize=vec3(computedVolumeInfo.cellSize,computedVolumeInfo.cellSize,computedVolumeInfo.cellSize)/2;
-		computedVolumeInfo.zeroCellCenter=computedVolumeInfo.mainVolumeCenter-vec3(computedVolumeInfo.cellSize,computedVolumeInfo.cellSize,computedVolumeInfo.cellSize)*(decimal)(computedVolumeInfo.cellCount/2);
+        computedVolumeInfo.cellHalfSize=dvec3(computedVolumeInfo.cellSize,computedVolumeInfo.cellSize,computedVolumeInfo.cellSize)/2;
+        computedVolumeInfo.zeroCellCenter=computedVolumeInfo.mainVolumeCenter-dvec3(computedVolumeInfo.cellSize,computedVolumeInfo.cellSize,computedVolumeInfo.cellSize)*(decimal)(computedVolumeInfo.cellCount/2);
 		computedVolumeInfo.maximal_marker_index=0;
 	}
-	void ScalarFieldCreator::FirstStep_Params(const vec3& boxMin,const vec3& boxMax)
+    void ScalarFieldCreator::FirstStep_Params(const dvec3& boxMin,const dvec3& boxMax)
 	{
 		//Compute the bouding boxes
-		vec3 cellCubeSize(resolution,resolution,resolution);
+        dvec3 cellCubeSize(resolution,resolution,resolution);
 		cellCubeSize*=2;
 		ComputeMatrixParams(boxMin-cellCubeSize,boxMax+cellCubeSize,resolution,this->volumeInfo);
 		//Allocate matrix
@@ -98,17 +98,17 @@ namespace ScalarFieldBuilders
 		return this->volumeInfo.cellCount;
 	}
 
-	void ScalarFieldCreator::GetMinMax(vec3& minBox,vec3& maxBox)
+    void ScalarFieldCreator::GetMinMax(dvec3& minBox,dvec3& maxBox)
 	{
 		minBox=this->volumeInfo.boxMin;
 		maxBox=this->volumeInfo.boxMax;
 	}
 
-	decimal ScalarFieldCreator::GetVolumeValue(const SpatialDiscretization::weight_t& volId)
+    double_t ScalarFieldCreator::GetVolumeValue(const SpatialDiscretization::weight_t& volId)
 	{
 		if(volId>=0 && (std::size_t)volId<this->volumeInfo.volumeValue.size())
 		{
-			return (decimal)this->volumeInfo.volumeValue[volId];
+            return this->volumeInfo.volumeValue[volId];
 		}else{
 			return -1.f;
 		}
@@ -120,8 +120,7 @@ namespace ScalarFieldBuilders
 	SpatialDiscretization::weight_t ScalarFieldCreator::GetVolumeCount()
 	{
 		return this->volumeInfo.volumeCount;
-	}
-	//decimal GetVolumeValue(const SpatialDiscretization::weight_t& volId);
+    }
 
 	bool ScalarFieldCreator::IsContainsVol( const ivec2& xyCell, SpatialDiscretization::weight_t& volId)
 	{
@@ -146,7 +145,7 @@ namespace ScalarFieldBuilders
 			maxVolId=MAX(maxVolId,currentCell->GetData());
 		}
 	}
-	typedef std::pair<SpatialDiscretization::weight_t,decimal> listValue_t;
+    typedef std::pair<SpatialDiscretization::weight_t, double_t> listValue_t;
 	int sortFunc(const listValue_t& left,const listValue_t& right)
 	{
 		return left.second>right.second;
@@ -219,7 +218,7 @@ namespace ScalarFieldBuilders
 					{
 						for(cell_id_t cell_z_offset=0;cell_z_offset<currentCell->GetSize();cell_z_offset++)
 						{
-							vec3 cellCenter=CellIdToCenterCoordinate(ivec3(cell_x,cell_y,cell_z+cell_z_offset),this->volumeInfo.cellSize,this->volumeInfo.zeroCellCenter);
+                            dvec3 cellCenter=CellIdToCenterCoordinate(ivec3(cell_x,cell_y,cell_z+cell_z_offset),this->volumeInfo.cellSize,this->volumeInfo.zeroCellCenter);
 							xyzFile<<cellCenter.x<<" "<<cellCenter.y<<" "<<cellCenter.z<<std::endl;
 						}
 					}
@@ -248,8 +247,8 @@ namespace ScalarFieldBuilders
 		  getline (coordinatesFile,line);
 		  //id X Y Z
 		  int objectIndex;
-		  vec3 coordinate;
-		  sscanf(line.c_str(),"%i %f %f %f",&objectIndex,&(coordinate.x),&(coordinate.y),&(coordinate.z));
+          dvec3 coordinate;
+          sscanf(line.c_str(),"%i %lf %lf %lf",&objectIndex,&(coordinate.x),&(coordinate.y),&(coordinate.z));
 		  ivec3 ijk=this->GetCellIdByCoord(coordinate);
 		  ijkFile<<objectIndex<<" "<<ijk.a<<" "<<ijk.b<<" "<<ijk.c<<" "<<this->GetMatrixValue(ijk)<<std::endl;
 		}
@@ -394,7 +393,7 @@ namespace ScalarFieldBuilders
 			xyzFile<<"ASCII"<<std::endl;
 			xyzFile<<"DATASET STRUCTURED_POINTS"<<std::endl;
 			xyzFile<<"DIMENSIONS "<<(max_x-min_x+1)<<" "<<(max_y-min_y+1)<<" "<<(max_z-min_z+1)<<std::endl;
-			vec3 origin=this->GetCenterCellCoordinates(ivec3(min_x, min_y, min_z));
+            dvec3 origin=this->GetCenterCellCoordinates(ivec3(min_x, min_y, min_z));
 			xyzFile<<"ORIGIN "<<origin.x<<" "<<origin.y<<" "<<origin.z<<std::endl;
 			xyzFile<<"SPACING "<<volumeInfo.cellSize<<" "<<volumeInfo.cellSize<<" "<<volumeInfo.cellSize<<std::endl;
 			xyzFile<<"POINT_DATA "<<(max_x-min_x+1)*(max_y-min_y+1)*(max_z-min_z+1)<<std::endl;
@@ -493,11 +492,11 @@ namespace ScalarFieldBuilders
 		return modification;
 	}
 
-	void ScalarFieldCreator::ComputeVolumesValue(std::vector<decimal>& volumeValue)
+    void ScalarFieldCreator::ComputeVolumesValue(std::vector<double_t>& volumeValue)
 	{
 		using namespace SpatialDiscretization;
-		volumeValue=std::vector<decimal>(this->volumeInfo.volumeCount,0.);
-		decimal cellVolume=pow((decimal)this->volumeInfo.cellSize,(decimal)3.);
+        volumeValue=std::vector<double_t>(this->volumeInfo.volumeCount,0.);
+        double_t cellVolume=pow(this->volumeInfo.cellSize, 3.);
 		for(cell_id_t cell_x=0;cell_x<volumeInfo.cellCount;cell_x++)
 		{
 			for(cell_id_t cell_y=0;cell_y<volumeInfo.cellCount;cell_y++)
@@ -538,9 +537,9 @@ namespace ScalarFieldBuilders
 		return ivec3();
 	}
 
-	ivec3 ScalarFieldCreator::GetCellIdByCoord(const vec3& position)
+    ivec3 ScalarFieldCreator::GetCellIdByCoord(const dvec3& position)
 	{
-		vec3 tmpvec=((position-this->volumeInfo.mainVolumeCenter)/this->volumeInfo.cellSize);
+        dvec3 tmpvec=((position-this->volumeInfo.mainVolumeCenter)/this->volumeInfo.cellSize);
 		ivec3 halfCellCount(this->volumeInfo.cellCount/2,this->volumeInfo.cellCount/2,this->volumeInfo.cellCount/2);
 		return ivec3((long)floor(tmpvec.x),(long)floor(tmpvec.y),(long)floor(tmpvec.z))+halfCellCount;
 	}
@@ -607,7 +606,7 @@ namespace ScalarFieldBuilders
 		}while(moreCellsToCheck);
 	}
 
-	vec3 ScalarFieldCreator::GetCenterCellCoordinates( const ivec3& cell_id) const
+    dvec3 ScalarFieldCreator::GetCenterCellCoordinates( const ivec3& cell_id) const
 	{
 		return CellIdToCenterCoordinate(cell_id,this->volumeInfo.cellSize, this->volumeInfo.zeroCellCenter);
 	}

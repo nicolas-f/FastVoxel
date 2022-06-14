@@ -241,7 +241,7 @@ public:
 	};
 };
 typedef base_vec3<decimal> vec3;
-typedef base_vec3<double> dvec3;
+typedef base_vec3<double_t> dvec3;
 
 
 inline vec3 dvec3_to_vec3(const dvec3 &v1) {

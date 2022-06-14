@@ -60,12 +60,12 @@
  * @param[out] minRange Indice de d�but de l'intervalle
  * @param[out] maxRange Indice de fin de l'intervalle
  */
-void GetRangeIntersectedBoundingCubeByTri(const SpatialDiscretization::cell_id_t& boxCellCount,const vec3& boxCenter,const decimal& cellSize,const vec3& triA,const vec3& triB,const vec3& triC, ivec3& minRange,ivec3& maxRange)
+void GetRangeIntersectedBoundingCubeByTri(const SpatialDiscretization::cell_id_t& boxCellCount,const dvec3& boxCenter,const decimal& cellSize,const dvec3& triA,const dvec3& triB,const dvec3& triC, ivec3& minRange,ivec3& maxRange)
 {
 	//Ancienne m�thode
-	vec3 bmin(MIN(MIN(triA.x,triB.x),triC.x),MIN(MIN(triA.y,triB.y),triC.y),MIN(MIN(triA.z,triB.z),triC.z));
-	vec3 bmax(MAX(MAX(triA.x,triB.x),triC.x),MAX(MAX(triA.y,triB.y),triC.y),MAX(MAX(triA.z,triB.z),triC.z));
-	vec3 tmpvec=((bmin-boxCenter)/cellSize);
+    dvec3 bmin(MIN(MIN(triA.x,triB.x),triC.x),MIN(MIN(triA.y,triB.y),triC.y),MIN(MIN(triA.z,triB.z),triC.z));
+    dvec3 bmax(MAX(MAX(triA.x,triB.x),triC.x),MAX(MAX(triA.y,triB.y),triC.y),MAX(MAX(triA.z,triB.z),triC.z));
+    dvec3 tmpvec=((bmin-boxCenter)/cellSize);
 	ivec3 halfCellCount(boxCellCount/2,boxCellCount/2,boxCellCount/2);
 	minRange=ivec3((long)floor(tmpvec.x),(long)floor(tmpvec.y),(long)floor(tmpvec.z))+halfCellCount;
 	tmpvec=((bmax-boxCenter)/cellSize);
@@ -88,11 +88,11 @@ namespace ScalarFieldBuilders
         if(!formatRPLY::CPly::ImportPly(model3D,fileInput) || model3D.modelVertices.size()==0)
             return false;
 
-        vec3 minBoundingBox=(*model3D.modelVertices.begin());
-        vec3 maxBoundingBox=(*model3D.modelVertices.begin());
-        std::vector<vec3> vertices_vec;
+        dvec3 minBoundingBox=(*model3D.modelVertices.begin());
+        dvec3 maxBoundingBox=(*model3D.modelVertices.begin());
+        std::vector<dvec3> vertices_vec;
         vertices_vec.reserve(model3D.modelVertices.size());
-        for(std::list<vec3>::iterator itvert=model3D.modelVertices.begin();itvert!=model3D.modelVertices.end();itvert++)
+        for(std::list<dvec3>::iterator itvert=model3D.modelVertices.begin();itvert!=model3D.modelVertices.end();itvert++)
         {
             MAXVEC(maxBoundingBox,(*itvert));
             MINVEC(minBoundingBox,(*itvert));
@@ -118,7 +118,7 @@ namespace ScalarFieldBuilders
         this->ThirdStep_VolumesCreator();
 		return true;
     }
-	void TriangleScalarFieldCreator::SecondStep_PushTri(const vec3& A,const vec3& B,const vec3& C,const SpatialDiscretization::weight_t& marker)
+    void TriangleScalarFieldCreator::SecondStep_PushTri(const dvec3& A,const dvec3& B,const dvec3& C,const SpatialDiscretization::weight_t& marker)
 	{
 		#ifdef _DEBUG
 		bool insideABox(false);
@@ -127,15 +127,15 @@ namespace ScalarFieldBuilders
 		using namespace SpatialDiscretization;
 		ivec3 minRange,maxRange;
 		GetRangeIntersectedBoundingCubeByTri(this->volumeInfo.cellCount,this->volumeInfo.mainVolumeCenter,this->volumeInfo.cellSize,A,B,C,minRange,maxRange);
-		decimal boxhalfsize[3],triverts[3][3];
+        double_t boxhalfsize[3],triverts[3][3];
 
-		memcpy(boxhalfsize,&this->volumeInfo.cellHalfSize,sizeof(vec3));
-		memcpy(triverts[0],&A,sizeof(vec3));
-		memcpy(triverts[1],&B,sizeof(vec3));
-		memcpy(triverts[2],&C,sizeof(vec3));
+        memcpy(boxhalfsize,&this->volumeInfo.cellHalfSize,sizeof(dvec3));
+        memcpy(triverts[0],&A,sizeof(dvec3));
+        memcpy(triverts[1],&B,sizeof(dvec3));
+        memcpy(triverts[2],&C,sizeof(dvec3));
 
 		//Todo multi-thread sur X ou X,Y
-		vec3 boxcenter;
+        dvec3 boxcenter;
 		for(cell_id_t cell_x=minRange.x;cell_x<=(cell_id_t)maxRange.x;cell_x++)
 		{
 			for(cell_id_t cell_y=minRange.y;cell_y<=(cell_id_t)maxRange.y;cell_y++)

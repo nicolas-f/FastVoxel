@@ -31,7 +31,7 @@ namespace ScalarFieldBuilders
 	/**
 	 * Retourne les coordonnées du centre du cube correspondant à l'indice en paramètre
 	 */
-	vec3 CellIdToCenterCoordinate( const ivec3& cell_id, const decimal& cellSize, const vec3& zeroCellCenter);
+    dvec3 CellIdToCenterCoordinate( const ivec3& cell_id, const double_t& cellSize, const dvec3& zeroCellCenter);
 	/**
 	 * Cette classe permet de générer un espace discrétisé en plusieurs volumes. C'est la première étape de la reconstruction du modèle.
 	 */
@@ -47,20 +47,20 @@ namespace ScalarFieldBuilders
 		    : cellSize(0.),cellCount(0),volumeCount(0),maximal_marker_index(0)
             {
             }
-			decimal cellSize;
+            double_t cellSize;
 			unsigned int cellCount;
-			vec3 mainVolumeCenter;
-			vec3 cellHalfSize;
-			vec3 zeroCellCenter;
+            dvec3 mainVolumeCenter;
+            dvec3 cellHalfSize;
+            dvec3 zeroCellCenter;
 			SpatialDiscretization::weight_t volumeCount;
-			std::vector<decimal> volumeValue;
-			vec3 boxMin;
-			vec3 boxMax;
+            std::vector<double_t> volumeValue;
+            dvec3 boxMin;
+            dvec3 boxMax;
 			SpatialDiscretization::weight_t maximal_marker_index;
 		} volumeInfo;
 		SpatialDiscretization::domainInformation_t domainInformation;
-		decimal resolution;
-		static void ComputeMatrixParams(const vec3& boxMin,const vec3& boxMax, const decimal& minResolution, mainVolumeConstruction_t& computedVolumeInfo);
+        double_t resolution;
+        static void ComputeMatrixParams(const dvec3& boxMin,const dvec3& boxMax, const double_t& minResolution, mainVolumeConstruction_t& computedVolumeInfo);
 		/**
 		 * Initialise les données pour le volume extérieur
 		 */
@@ -83,7 +83,7 @@ namespace ScalarFieldBuilders
 		 * Calcul pour chaque volume sa valeur en m^3
 		 * @param[out] volumeValue Un tableau de dimension égale au nombre de volume dans le domaine. Dont la valeur est en m^3.
 		 */
-		void ComputeVolumesValue(std::vector<decimal>& volumeValue);
+        void ComputeVolumesValue(std::vector<double_t>& volumeValue);
 
 
 	public:
@@ -91,13 +91,13 @@ namespace ScalarFieldBuilders
 		 * Constructeur
 		 * @param _resolution Dimension d'une cellule qui composera la matrice. Plus la résolution est élevée plus le model généré sera proche du modèle en entrée et plus de triangles seront générés.
 		 */
-		ScalarFieldCreator(const decimal& _resolution);
+        ScalarFieldCreator(const double_t& _resolution);
 		/**
 		 * Initialisation de la matrice selon la résolution et la boite englobante passé en paramètre.
 		 * @param boxMin Coordonnées minimale des objets qui alimenteront la matrice
 		 * @param boxMax Coordonnées maximale des objets qui alimenteront la matrice
 		 */
-		void FirstStep_Params(const vec3& boxMin,const vec3& boxMax);
+        void FirstStep_Params(const dvec3& boxMin,const dvec3& boxMax);
 		virtual ~ScalarFieldCreator();
 
 		/**
@@ -113,7 +113,7 @@ namespace ScalarFieldBuilders
 		SpatialDiscretization::weight_t GetMatrixValue(const ivec3& index);
 
 
-		vec3 GetCenterCellCoordinates( const ivec3& cell_id) const;
+        dvec3 GetCenterCellCoordinates( const ivec3& cell_id) const;
 
 
         /**
@@ -134,9 +134,9 @@ namespace ScalarFieldBuilders
 		/**
 		 * Get the volume (m3) corresponding to volume ID [0-GetVolumeCount()[
 		 */
-		decimal GetVolumeValue(const SpatialDiscretization::weight_t& volId);
+        double_t GetVolumeValue(const SpatialDiscretization::weight_t& volId);
 
-		void GetMinMax(vec3& minBox,vec3& maxBox);
+        void GetMinMax(dvec3& minBox,dvec3& maxBox);
 
 		/**
 		 * Exporte les indices et volumes des domaines
@@ -149,7 +149,7 @@ namespace ScalarFieldBuilders
 		unsigned int count();
 		void MakeXYZ(const std::string& filename,const SpatialDiscretization::weight_t& idVol);
 		void ExportIJKData(const std::string& Infilename,const std::string& Outfilename);
-		void MakeXYZ(const std::string& filename,const decimal& minVol);
+        void MakeXYZ(const std::string& filename,const double_t& minVol);
 		void ExportVTK(const std::string& filename,const SpatialDiscretization::weight_t& idVol=-1);
 		std::size_t GetDomainSize();
 		bool CheckDiscretisation();
@@ -168,7 +168,7 @@ namespace ScalarFieldBuilders
         /**
 		 * Retourne l'indice de la cellule contenant le point passé en paramètre
 		 */
-		ivec3 GetCellIdByCoord(const vec3& position);
+        ivec3 GetCellIdByCoord(const dvec3& position);
 
 		void GetCellValueBoundaries(ivec3& min,ivec3& max,const SpatialDiscretization::weight_t& volid);
 	};

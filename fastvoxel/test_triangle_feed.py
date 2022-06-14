@@ -60,7 +60,7 @@ expected_res=np.asarray([[100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100]
                          [100, 102, 102, 102, 102, 102, 102, 102, 102, 102, 100],
                          [100, 102, 102, 102, 102, 102, 102, 102, 102, 102, 100],
                          [100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100]],dtype=np.short)
-print "Copy matrix ok ?",(pieceof[:,:,pieceof.shape[2]/2]==expected_res).all()
+print("Copy matrix ok ?",(pieceof[:,:,pieceof.shape[2]/2]==expected_res).all())
 
 #import matplotlib.pyplot as plt
 #from pylab import show

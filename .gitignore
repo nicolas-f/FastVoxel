@@ -13,6 +13,7 @@
 .*.sw[nop]
 .sw[nop]
 *.tmp
+.idea
 
 # Compiled source #
 ###################
@@ -27,6 +28,8 @@
 *.pyd
 *.exp
 *.lib
+_skbuild/
+venv/
 
 # Packages #
 ############

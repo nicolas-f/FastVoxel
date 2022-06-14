@@ -19,7 +19,7 @@ def run():
     voxelizator.load_ply_model("elmia.ply")
 
 
-    print "Process done in %f sec" % (time.time()-deb)
+    print("Process done in %f sec" % (time.time()-deb))
     #Extract the cell i,j,k values corresponding to position in meter (a position in the volume to extract)
     cellid=voxelizator.get_cell_id_by_coord(vec3(7,-0.5,1))
     #Get the corresponding volume id
@@ -32,11 +32,11 @@ def run():
     maxv+=fv.ivec3(1,1,1)
     extract_shape=maxv-minv
 
-    print "Matrix Size is %ix%ix%i" % (extract_shape[0],extract_shape[1],extract_shape[2])
+    print("Matrix Size is %ix%ix%i" % (extract_shape[0],extract_shape[1],extract_shape[2]))
 
     #Plotting
     if doplot:
-        print "voxelizator.get_first_volume_index():",voxelizator.get_first_volume_index()
+        print("voxelizator.get_first_volume_index():",voxelizator.get_first_volume_index())
         nbmarkers=voxelizator.get_first_volume_index()+voxelizator.get_volume_count()
         #Create a matrix to extract only an Y slice of the 3D voxelisation (save lot of memory)
         pieceof=np.zeros((extract_shape[0],1,extract_shape[2]),dtype=np.short)

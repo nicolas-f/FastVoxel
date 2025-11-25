@@ -1,0 +1,105 @@
+name: Build FastVoxel
+
+on:
+  push:
+    branches: [ fixcmake, main, master ]
+  pull_request:
+    branches: [ fixcmake, main, master ]
+  workflow_dispatch:
+
+jobs:
+  build-linux:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ['3.10']
+    
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y swig cmake build-essential
+
+      - name: Install Python build dependencies
+        run: |
+          pip install "numpy<2.0" scikit-build setuptools wheel build
+
+      - name: Build and install FastVoxel
+        run: |
+          pip install . -v
+
+      - name: Test import (from different directory)
+        run: |
+          python -c "import fastvoxel; print('FastVoxel imported successfully')"
+        working-directory: demo
+
+  build-macos:
+    runs-on: macos-latest
+    strategy:
+      matrix:
+        python-version: ['3.10']
+    
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install system dependencies
+        run: |
+          brew install swig cmake
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install "numpy<2.0" scikit-build setuptools wheel
+
+      - name: Build and install FastVoxel
+        run: |
+          pip install .
+
+      - name: Test import
+        run: |
+          python -c "import fastvoxel; print('FastVoxel imported successfully')"
+        working-directory: demo
+
+  build-windows:
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        python-version: ['3.10']
+    
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install SWIG
+        run: |
+          choco install swig -y
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install "numpy<2.0" scikit-build setuptools wheel
+
+      - name: Build and install FastVoxel
+        run: |
+          pip install .
+
+      - name: Test import
+        run: |
+          python -c "import fastvoxel; print('FastVoxel imported successfully')"
+        working-directory: demo

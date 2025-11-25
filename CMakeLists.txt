@@ -1,8 +1,8 @@
-CMAKE_MINIMUM_REQUIRED(VERSION 3.6.0)
+CMAKE_MINIMUM_REQUIRED(VERSION 3.10.0)
 
 # Maps to a solution file (fastvoxel.sln). The solution will
 # have all targets (exe, lib, dll) as projects (.vcproj)
-project (fastvoxel VERSION 1.0.1)
+project (fastvoxel VERSION 1.0.2)
 
 # Set compiler flags and options.
 #############################################################
@@ -56,42 +56,13 @@ include( InstallRequiredSystemLibraries )
 # require swig > v3
 FIND_PACKAGE(SWIG REQUIRED)
 
+include(UseSWIG)
 
-INCLUDE(${SWIG_USE_FILE})
-
-# Find package for building
-FIND_PACKAGE(PythonLibs 3.8 REQUIRED)
+# Find Python 3
+find_package(Python3 COMPONENTS Interpreter Development.Module NumPy REQUIRED)
+list(APPEND CMAKE_SWIG_FLAGS "-py3" "-DPY3")
 
 #Find numpy include directory
-
-find_package(PythonInterp)
-set(__numpy_out 1)
-
-if (PYTHON_EXECUTABLE)
-  # Find out the include path
-  execute_process(
-    COMMAND "${PYTHON_EXECUTABLE}" -c
-            "from __future__ import print_function\ntry: import numpy; print(numpy.get_include(), end='')\nexcept:pass\n"
-            OUTPUT_VARIABLE __numpy_path)
-  # And the version
-  execute_process(
-    COMMAND "${PYTHON_EXECUTABLE}" -c
-            "from __future__ import print_function\ntry: import numpy; print(numpy.__version__, end='')\nexcept:pass\n"
-    OUTPUT_VARIABLE __numpy_version)
-elseif(__numpy_out)
-  message(STATUS "Python executable not found.")
-endif(PYTHON_EXECUTABLE)
-
-
-find_path(PYTHON_NUMPY_INCLUDE_DIR numpy/arrayobject.h
-  HINTS "${__numpy_path}" "${PYTHON_INCLUDE_PATH}" NO_DEFAULT_PATH)
-
-if(PYTHON_NUMPY_INCLUDE_DIR)
-  set(PYTHON_NUMPY_FOUND 1 CACHE INTERNAL "Python numpy found")
-endif(PYTHON_NUMPY_INCLUDE_DIR)
-
-
-INCLUDE_DIRECTORIES(${PYTHON_NUMPY_INCLUDE_DIR})
 
 INCLUDE_DIRECTORIES(${PYTHON_INCLUDE_PATH})
 
@@ -110,7 +81,7 @@ ENDIF ()
 
 
 
-SWIG_LINK_LIBRARIES(fastvoxel ${PYTHON_LIBRARIES})
+SWIG_LINK_LIBRARIES(fastvoxel Python3::NumPy)
 
 # Creates a folder "libraries" and adds target project (lib_interface.vcproj) under it
 set_property(TARGET ${SWIG_MODULE_fastvoxel_REAL_NAME} PROPERTY FOLDER "libraries")

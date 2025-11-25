@@ -1,4 +1,4 @@
-CMAKE_MINIMUM_REQUIRED(VERSION 3.10.0)
+CMAKE_MINIMUM_REQUIRED(VERSION 3.15.0)
 
 # Maps to a solution file (fastvoxel.sln). The solution will
 # have all targets (exe, lib, dll) as projects (.vcproj)
@@ -99,7 +99,7 @@ endif()
 #    INSTALL
 #--------------#
 
-set(FASTVOXEL_RESSOURCES ${PROJECT_SOURCE_DIR}/fastvoxel)
+set(FASTVOXEL_RESOURCES ${PROJECT_SOURCE_DIR}/resources/fastvoxel)
 
 # Adds logic to INSTALL.vcproj to copy _fastvoxel.pyd to the destination directory
 install (TARGETS ${SWIG_MODULE_fastvoxel_REAL_NAME}
@@ -111,18 +111,7 @@ if( CMAKE_INSTALL_SYSTEM_RUNTIME_LIBS )
 endif( CMAKE_INSTALL_SYSTEM_RUNTIME_LIBS )
 
 install (FILES
-        ${FASTVOXEL_RESSOURCES}/__init__.py
+        ${FASTVOXEL_RESOURCES}/__init__.py
 		${CMAKE_CURRENT_BINARY_DIR}/fastvoxel.py
         DESTINATION fastvoxel/)
-        
-add_executable(fastvoxel ${FASTVOXEL_SOURCES})
 
-if(WIN32)
-    #install(CODE "
-    #include(BundleUtilities)   
-    # Rename to .exe as cmake check if the file ends with .exe in windows before gathering dependencies..
-    #file(RENAME \"\${CMAKE_INSTALL_PREFIX}/fastvoxel/_fastvoxel.pyd\" \"\${CMAKE_INSTALL_PREFIX}/fastvoxel/_fastvoxel.exe\")    
-    #fixup_bundle(\"\${CMAKE_INSTALL_PREFIX}/fastvoxel/_fastvoxel.exe\" \"\"   \"${DIRS}\")
-    #file(RENAME \"\${CMAKE_INSTALL_PREFIX}/fastvoxel/_fastvoxel.exe\" \"\${CMAKE_INSTALL_PREFIX}/fastvoxel/_fastvoxel.pyd\") 
-    #")
-endif()

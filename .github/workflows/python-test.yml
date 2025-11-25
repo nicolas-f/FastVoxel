@@ -66,12 +66,9 @@ jobs:
       - name: Install Python dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install numpy scikit-build setuptools wheel
-
       - name: Build and install FastVoxel
         run: |
           pip install .
-
       - name: Test import
         run: |
           python -c "import fastvoxel; print('FastVoxel imported successfully')"
@@ -98,12 +95,9 @@ jobs:
       - name: Install Python dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install numpy scikit-build setuptools wheel
-
       - name: Build and install FastVoxel
         run: |
           pip install .
-
       - name: Test import
         run: |
           python -c "import fastvoxel; print('FastVoxel imported successfully')"

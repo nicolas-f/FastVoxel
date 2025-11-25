@@ -2,9 +2,7 @@ name: Build FastVoxel
 
 on:
   push:
-    branches: [ fixcmake, main, master ]
   pull_request:
-    branches: [ fixcmake, main, master ]
   workflow_dispatch:
 
 jobs:

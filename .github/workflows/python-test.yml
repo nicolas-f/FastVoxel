@@ -33,10 +33,9 @@ jobs:
         run: |
           pip install . -v
 
-      - name: Test import (from different directory)
+      - name: Test library
         run: |
-          python -c "import fastvoxel; print('FastVoxel imported successfully')"
-        working-directory: demo
+          python -m pytest
 
   build-macos:
     runs-on: macos-latest
@@ -65,10 +64,9 @@ jobs:
         run: |
           pip install .
 
-      - name: Test import
+      - name: Test library
         run: |
-          python -c "import fastvoxel; print('FastVoxel imported successfully')"
-        working-directory: demo
+          python -m pytest
 
   build-windows:
     runs-on: windows-latest
@@ -97,7 +95,6 @@ jobs:
         run: |
           pip install .
 
-      - name: Test import
+      - name: Test library
         run: |
-          python -c "import fastvoxel; print('FastVoxel imported successfully')"
-        working-directory: demo
+          python -m pytest

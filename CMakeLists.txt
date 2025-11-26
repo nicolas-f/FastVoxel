@@ -1,8 +1,8 @@
-CMAKE_MINIMUM_REQUIRED(VERSION 3.15.0)
+cmake_minimum_required(VERSION 3.15...3.30)
 
 # Maps to a solution file (fastvoxel.sln). The solution will
 # have all targets (exe, lib, dll) as projects (.vcproj)
-project (fastvoxel VERSION 1.0.2)
+project(fastvoxel VERSION "${SKBUILD_PROJECT_VERSION}")
 
 # Set compiler flags and options.
 #############################################################
@@ -46,25 +46,19 @@ set(FASTVOXEL_SOURCES
     src/Core/mathlib.cpp
     )
 
-message(STATUS " SWIG_EXECUTABLE     - $ENV{SWIG_EXECUTABLE}")
-set(CMAKE_INSTALL_MFC_LIBRARIES ON) 
-include( InstallRequiredSystemLibraries )
-#---------------------------------------#
-#    DEPENDENCY & EXECUTABLE (OR LIB)
-#---------------------------------------#
+# Find Python 3 and numpy
+find_package(Python3 COMPONENTS Interpreter Development.Module NumPy REQUIRED)
 
-# require swig > v3
-FIND_PACKAGE(SWIG REQUIRED)
+find_package(
+        SWIG
+        COMPONENTS python
+        REQUIRED)
 
 include(UseSWIG)
 
-# Find Python 3
-find_package(Python3 COMPONENTS Interpreter Development.Module NumPy REQUIRED)
 list(APPEND CMAKE_SWIG_FLAGS "-py3" "-DPY3")
 
-#Find numpy include directory
-
-INCLUDE_DIRECTORIES(${PYTHON_INCLUDE_PATH})
+configure_file(src/__init__.py ${CMAKE_CURRENT_BINARY_DIR}/generated/__init__.py )
 
 INCLUDE_DIRECTORIES("${PROJECT_SOURCE_DIR}/src")
 
@@ -72,28 +66,32 @@ SET(CMAKE_SWIG_FLAGS "")
 
 SET_SOURCE_FILES_PROPERTIES(src/fastvoxel.i PROPERTIES CPLUSPLUS ON)
 
-
-IF ((${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION} GREATER 3.8) OR (${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION} EQUAL 3.8))
-  SWIG_ADD_LIBRARY(fastvoxel LANGUAGE python SOURCES src/fastvoxel.i ${FASTVOXEL_SOURCES})
-ELSE()
-  SWIG_ADD_MODULE(fastvoxel python src/fastvoxel.i ${FASTVOXEL_SOURCES})
-ENDIF ()
-
-
-
-SWIG_LINK_LIBRARIES(fastvoxel Python3::NumPy)
-
-# Creates a folder "libraries" and adds target project (lib_interface.vcproj) under it
-set_property(TARGET ${SWIG_MODULE_fastvoxel_REAL_NAME} PROPERTY FOLDER "libraries")
-
-if(WIN32) # Check if we are on Windows
- if(MSVC) # Check if we are using the Visual Studio compiler
-   # A 'Debug' build of the wrappers requires a debug build of the Python interpreter.
-   # http://www.swig.org/Doc2.0/Python.html#Python_nn12
-   # Fix linking with non existing python27_d.lib
-   add_definitions(-DSWIG_PYTHON_INTERPRETER_NO_DEBUG)
- endif()
+swig_add_library(
+        fastvoxel
+        LANGUAGE python
+        OUTPUT_DIR "${SKBUILD_PLATLIB_DIR}/fastvoxel"
+        OUTFILE_DIR ${CMAKE_CURRENT_BINARY_DIR}
+        SOURCES src/fastvoxel.i  ${FASTVOXEL_SOURCES})
+# OUTPUT_DIR "${SKBUILD_PLATLIB_DIR}"
+# Force use of release Python library even in debug builds
+if(WIN32 AND CMAKE_BUILD_TYPE MATCHES Debug)
+    # Remove the _d suffix that CMake adds for debug builds
+    set_target_properties(Python3::Module PROPERTIES
+            IMPORTED_LOCATION_DEBUG "${Python3_LIBRARY_RELEASE}"
+    )
+    # Prevent automatic _d suffix addition
+    add_compile_definitions(SWIG_PYTHON_INTERPRETER_NO_DEBUG)
 endif()
+
+
+if(WIN32)
+    set_property(TARGET fastvoxel PROPERTY SUFFIX "${Python_SOABI}.pyd")
+else()
+    set_property(TARGET fastvoxel
+            PROPERTY SUFFIX "${Python_SOABI}${CMAKE_SHARED_MODULE_SUFFIX}")
+endif()
+
+target_link_libraries(fastvoxel PRIVATE Python3::Module Python3::NumPy)
 
 #--------------#
 #    INSTALL
@@ -102,16 +100,10 @@ endif()
 set(FASTVOXEL_RESOURCES ${PROJECT_SOURCE_DIR}/resources/fastvoxel)
 
 # Adds logic to INSTALL.vcproj to copy _fastvoxel.pyd to the destination directory
-install (TARGETS ${SWIG_MODULE_fastvoxel_REAL_NAME}
-      LIBRARY DESTINATION fastvoxel/
-)
-
-if( CMAKE_INSTALL_SYSTEM_RUNTIME_LIBS )
-    install( PROGRAMS ${CMAKE_INSTALL_SYSTEM_RUNTIME_LIBS} DESTINATION fastvoxel COMPONENT System )
-endif( CMAKE_INSTALL_SYSTEM_RUNTIME_LIBS )
+install (TARGETS fastvoxel DESTINATION fastvoxel)
 
 install (FILES
-        ${FASTVOXEL_RESOURCES}/__init__.py
-		${CMAKE_CURRENT_BINARY_DIR}/fastvoxel.py
-        DESTINATION fastvoxel/)
+        ${CMAKE_CURRENT_BINARY_DIR}/generated/__init__.py
+        src/np_voxel.py
+        DESTINATION fastvoxel)
 

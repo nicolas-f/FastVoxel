@@ -25,8 +25,8 @@
 #include <fstream>
 #include <list>
 #include <utility>
-#include <stdio.h>
-#include <string.h>
+#include <cstring>
+#include <stdexcept>
 #include <input_output/progressionInfo.h>
 namespace ScalarFieldBuilders
 {

@@ -77,7 +77,7 @@ doc/cdoc/build
 # OS generated files #
 ######################
 .gdb_history
-.DS_Store?
+.DS_Store
 ehthumbs.db
 Icon?
 Thumbs.db

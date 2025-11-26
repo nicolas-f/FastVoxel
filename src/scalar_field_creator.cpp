@@ -25,8 +25,8 @@
 #include <fstream>
 #include <list>
 #include <utility>
-#include <stdio.h>
-#include <string.h>
+#include <cstring>
+#include <stdexcept>
 #include <input_output/progressionInfo.h>
 namespace ScalarFieldBuilders
 {
@@ -168,7 +168,7 @@ namespace ScalarFieldBuilders
 			return;
 
 		statVolsFile<<"Volume id"<<";value(m^3)"<<std::endl;
-		//On va trier par ordre décroissant de volume
+		//On va trier par ordre dï¿½croissant de volume
 		std::list<listValue_t> volumeList;
 		for(int i=0;i<GetVolumeCount();i++)
 		{
@@ -427,8 +427,8 @@ namespace ScalarFieldBuilders
 	void ScalarFieldCreator::InitExteriorVolumeId()
 	{
 		using namespace SpatialDiscretization;
-		//Pour chaque série Z
-		// La première et dernière série appartiendra au volume 2
+		//Pour chaque sï¿½rie Z
+		// La premiï¿½re et derniï¿½re sï¿½rie appartiendra au volume 2
 		cell_id_t cell_z=0;
 		for(cell_id_t cell_x=0;cell_x<volumeInfo.cellCount;cell_x++)
 		{
@@ -459,15 +459,15 @@ namespace ScalarFieldBuilders
 		{
 			if(sourceCell->GetData()==volumeId)
 			{
-				//On a trouvé une série de Z correspondant à la valeur à étendre
-				//On navigue jusqu'à la position de la source
+				//On a trouvï¿½ une sï¿½rie de Z correspondant ï¿½ la valeur ï¿½ ï¿½tendre
+				//On navigue jusqu'ï¿½ la position de la source
 				while(destinationZ+destinationCell->GetSize()<sourceZ) //while(destinationZ<sourceZ)
 				{
 					destinationZ+=destinationCell->GetSize();
 					if(!destinationCell->Next(&destinationCell))
 						return modification;
 				}
-				//On affecte à partir de sourceZ jusqu'a sourceZ+sourceCell->GetSize() les noeuds dont la valeur est 0
+				//On affecte ï¿½ partir de sourceZ jusqu'a sourceZ+sourceCell->GetSize() les noeuds dont la valeur est 0
 				//while(destinationZ>= sourceZ || destinationZ+destinationCell->GetSize()<=sourceZ+sourceCell->GetSize())
 				while(true)
 				{
@@ -552,11 +552,11 @@ namespace ScalarFieldBuilders
 
 		using namespace SpatialDiscretization;
 		std::size_t sizeOfMatrixXY(this->volumeInfo.cellCount*this->volumeInfo.cellCount);
-		PTR_ARR<bool> cellsToCheck(new bool[sizeOfMatrixXY]); //Matrice X,Y de booléen indiquant les cellules à vérifier dans le cycle courant
-		PTR_ARR<bool> NextCellsToCheck(new bool[sizeOfMatrixXY]); //Matrice X,Y de booléen indiquant les cellules à vérifier lors du prochain cycle.
+		PTR_ARR<bool> cellsToCheck(new bool[sizeOfMatrixXY]); //Matrice X,Y de boolï¿½en indiquant les cellules ï¿½ vï¿½rifier dans le cycle courant
+		PTR_ARR<bool> NextCellsToCheck(new bool[sizeOfMatrixXY]); //Matrice X,Y de boolï¿½en indiquant les cellules ï¿½ vï¿½rifier lors du prochain cycle.
 		memset(cellsToCheck.get(),1,sizeof(bool)*sizeOfMatrixXY);
 		memset(NextCellsToCheck.get(),0,sizeof(bool)*sizeOfMatrixXY);
-		bool moreCellsToCheck(true); //Si sur un cycle de test aucune cellule ne s'est vu modifié alors le volume volumeId est complétement défini
+		bool moreCellsToCheck(true); //Si sur un cycle de test aucune cellule ne s'est vu modifiï¿½ alors le volume volumeId est complï¿½tement dï¿½fini
 		do
 		{
 			moreCellsToCheck=false;
@@ -572,7 +572,7 @@ namespace ScalarFieldBuilders
 
 						ivec2 currentid(cell_x,cell_y);
 						/////////////////////////////
-						// En fonction des [2-4] voisins nous allons propager les identifiants de la série.
+						// En fonction des [2-4] voisins nous allons propager les identifiants de la sï¿½rie.
 						bool destCellUpdated(false);
 						for(unsigned short neigh=0;neigh<4;neigh++)
 						{
@@ -585,7 +585,7 @@ namespace ScalarFieldBuilders
 							}
 						}
 
-						if(destCellUpdated) //Cellule de destination modifié, toute les cellule voisines doivent être marqué comme à subir une propagation
+						if(destCellUpdated) //Cellule de destination modifiï¿½, toute les cellule voisines doivent ï¿½tre marquï¿½ comme ï¿½ subir une propagation
 						{
 							moreCellsToCheck=true;
 							for(unsigned short neigh=0;neigh<4;neigh++)
@@ -611,10 +611,23 @@ namespace ScalarFieldBuilders
 		return CellIdToCenterCoordinate(cell_id,this->volumeInfo.cellSize, this->volumeInfo.zeroCellCenter);
 	}
 
-	SpatialDiscretization::weight_t ScalarFieldCreator::GetMatrixValue(const ivec3& index)
-	{
-		return (*this->fieldData)[index.x][index.y][index.z];
-	}
+    SpatialDiscretization::weight_t ScalarFieldCreator::GetMatrixValue(const ivec3 &index) {
+	    if (index.x < this->volumeInfo.cellCount &&
+	        index.y < this->volumeInfo.cellCount &&
+	        index.z < this->volumeInfo.cellCount) {
+		    return (*this->fieldData)[index.x][index.y][index.z];
+	    }
+	    throw std::out_of_range(
+		    "Requested index (x: " + std::to_string(index.x) +
+		    ", y: " + std::to_string(index.y) +
+		    ", z: " + std::to_string(index.z) +
+		    ") is out of bounds for the field data. Ensure all indices are within the valid range: "
+		    "x < " + std::to_string(this->volumeInfo.cellCount) +
+		    ", y < " + std::to_string(this->volumeInfo.cellCount) +
+		    ", z < " + std::to_string(this->volumeInfo.cellCount)
+	    );
+    }
+
     void ScalarFieldCreator::CopyMatrix(SpatialDiscretization::weight_t* data,int ni,int nj,int nk,const ivec3& extractPos)
     {
         ivec3 extractPosEnd(MIN(ni+extractPos.a,volumeInfo.cellCount),MIN(nj+extractPos.b,volumeInfo.cellCount),MIN(nk+extractPos.c,volumeInfo.cellCount));

@@ -7,3 +7,12 @@ name = "fastvoxel"
 version = "1.0.2"
 requires-python = ">=3.8"
 dependencies = ["numpy"]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+]
+
+[tool.pytest.ini_options]
+addopts = "--maxfail=1"
+testpaths = ["Tests"]

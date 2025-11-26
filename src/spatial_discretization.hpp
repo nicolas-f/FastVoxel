@@ -31,6 +31,7 @@
 #endif
 
 #include <Core/mathlib.h> //Mathlib de libinterface
+#include <stdexcept>
 
 #ifndef __SPATIAL_DISCRETIZATION__
 #define __SPATIAL_DISCRETIZATION__

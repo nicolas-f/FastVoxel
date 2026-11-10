@@ -141,10 +141,10 @@ endif( CMAKE_INSTALL_SYSTEM_RUNTIME_LIBS )
 
 install (FILES
         ${FASTVOXEL_RESSOURCES}/__init__.py
-		${CMAKE_CURRENT_BINARY_DIR}/fastvoxel.py
-        DESTINATION fastvoxel/)
-        
-        
+        ${CMAKE_CURRENT_BINARY_DIR}/fastvoxel.py
+        ${PROJECT_SOURCE_DIR}/src/np_voxel.py
+        DESTINATION fastvoxel/
+)
 
 if(WIN32)
     #install(CODE "

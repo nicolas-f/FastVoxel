@@ -12,7 +12,7 @@
 {
 /* Support older NumPy data type names
  */
-%#if NDARRAY_VERSION < 0x01000000
+%#if !defined(NPY_VERSION) || NPY_VERSION < 0x01000000
 %#define NPY_BOOL          PyArray_BOOL
 %#define NPY_BYTE          PyArray_BYTE
 %#define NPY_UBYTE         PyArray_UBYTE

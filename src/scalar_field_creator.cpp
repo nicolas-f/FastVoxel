@@ -25,8 +25,8 @@
 #include <fstream>
 #include <list>
 #include <utility>
-#include <stdio.h>
-#include <string.h>
+#include <cstring>
+#include <stdexcept>
 #include <input_output/progressionInfo.h>
 namespace ScalarFieldBuilders
 {
@@ -46,12 +46,12 @@ namespace ScalarFieldBuilders
 		#define MAX(a, b)  (((a) > (b)) ? (a) : (b))
 	#endif
 
-	vec3 CellIdToCenterCoordinate( const ivec3& cell_id, const decimal& cellSize, const vec3& zeroCellCenter)
+    dvec3 CellIdToCenterCoordinate( const ivec3& cell_id, const double_t& cellSize, const dvec3& zeroCellCenter)
 	{
-		return  zeroCellCenter+vec3(cellSize*cell_id.x,cellSize*cell_id.y,cellSize*cell_id.z);
+        return  zeroCellCenter+dvec3(cellSize*cell_id.x,cellSize*cell_id.y,cellSize*cell_id.z);
 	}
 
-	ScalarFieldCreator::ScalarFieldCreator(const decimal& _resolution)
+    ScalarFieldCreator::ScalarFieldCreator(const double_t& _resolution)
 		:resolution(_resolution)
 	{
 
@@ -61,29 +61,52 @@ namespace ScalarFieldBuilders
 	ScalarFieldCreator::~ScalarFieldCreator()
 	{
 	}
-	void ScalarFieldCreator::ComputeMatrixParams(const vec3& boxMin,const vec3& boxMax, const decimal& minResolution, mainVolumeConstruction_t& computedVolumeInfo)
+    void ScalarFieldCreator::ComputeMatrixParams(const dvec3& boxMin,const dvec3& boxMax, const double_t& minResolution, mainVolumeConstruction_t& computedVolumeInfo)
 	{
-		vec3 boxsize=boxMax-boxMin;
-		ivec3 cellCount=ivec3((long)ceil(boxsize.x/minResolution),(long)ceil(boxsize.y/minResolution),(long)ceil(boxsize.z/minResolution));
+    const dvec3 boxsize = boxMax - boxMin;
 
-		computedVolumeInfo.boxMin=boxMin;
-		computedVolumeInfo.boxMax=boxMax;
-		computedVolumeInfo.cellCount=MAX(MAX(cellCount.x,cellCount.y),cellCount.z);
-		computedVolumeInfo.mainVolumeCenter=(boxMax+boxMin)/2.f;
-		computedVolumeInfo.cellSize=MAX(MAX(boxsize.x,boxsize.y),boxsize.z)/computedVolumeInfo.cellCount;
-		computedVolumeInfo.cellHalfSize=vec3(computedVolumeInfo.cellSize,computedVolumeInfo.cellSize,computedVolumeInfo.cellSize)/2;
-		computedVolumeInfo.zeroCellCenter=computedVolumeInfo.mainVolumeCenter-vec3(computedVolumeInfo.cellSize,computedVolumeInfo.cellSize,computedVolumeInfo.cellSize)*(decimal)(computedVolumeInfo.cellCount/2);
-		computedVolumeInfo.maximal_marker_index=0;
-	}
-	void ScalarFieldCreator::FirstStep_Params(const vec3& boxMin,const vec3& boxMax)
+    if (minResolution <= 0.)
+        throw std::invalid_argument("minResolution must be positive");
+
+    const ivec3 cellCount(
+        static_cast<int>(ceil(boxsize.x / minResolution)),
+        static_cast<int>(ceil(boxsize.y / minResolution)),
+        static_cast<int>(ceil(boxsize.z / minResolution)));
+
+    computedVolumeInfo.boxMin = boxMin;
+    computedVolumeInfo.boxMax = boxMax;
+    computedVolumeInfo.cellCountXYZ = cellCount;
+    computedVolumeInfo.cellCount =
+        MAX(MAX(cellCount.x, cellCount.y), cellCount.z);
+
+    computedVolumeInfo.mainVolumeCenter = (boxMax + boxMin) / 2.0;
+
+    // Keep the requested voxel size; do not shrink or enlarge it.
+    computedVolumeInfo.cellSize = minResolution;
+    computedVolumeInfo.cellHalfSize =
+        dvec3(minResolution, minResolution, minResolution) / 2.0;
+
+    // Center the complete voxel grid on the requested bounding box.
+    // zeroCellCenter is the center of voxel (0, 0, 0).
+    computedVolumeInfo.zeroCellCenter = computedVolumeInfo.mainVolumeCenter
+										- dvec3((cellCount.x / 2) * minResolution,
+												(cellCount.y / 2) * minResolution,
+												(cellCount.z / 2) * minResolution);
+
+    computedVolumeInfo.maximal_marker_index = 0;
+}
+    void ScalarFieldCreator::FirstStep_Params(const dvec3& boxMin,const dvec3& boxMax)
 	{
 		//Compute the bouding boxes
-		vec3 cellCubeSize(resolution,resolution,resolution);
+        dvec3 cellCubeSize(resolution,resolution,resolution);
 		cellCubeSize*=2;
 		ComputeMatrixParams(boxMin-cellCubeSize,boxMax+cellCubeSize,resolution,this->volumeInfo);
 		//Allocate matrix
 
 		domainInformation.domainSize=this->volumeInfo.cellCount;
+		domainInformation.domainSizeX=this->volumeInfo.cellCountXYZ.x;
+		domainInformation.domainSizeY=this->volumeInfo.cellCountXYZ.y;
+		domainInformation.domainSizeZ=this->volumeInfo.cellCountXYZ.z;
 		domainInformation.weight=0;
 		fieldData=PTR<SpatialDiscretization::weight_matrix>(new SpatialDiscretization::weight_matrix(domainInformation));
 	}
@@ -93,22 +116,27 @@ namespace ScalarFieldBuilders
 		(*fieldData).Count(cpt);
 		return cpt;
 	}
+
 	std::size_t ScalarFieldCreator::GetDomainSize()
 	{
 		return this->volumeInfo.cellCount;
 	}
 
-	void ScalarFieldCreator::GetMinMax(vec3& minBox,vec3& maxBox)
+	ivec3 ScalarFieldCreator::GetDomainShape()
+	{
+		return this->volumeInfo.cellCountXYZ;
+	}
+    void ScalarFieldCreator::GetMinMax(dvec3& minBox,dvec3& maxBox)
 	{
 		minBox=this->volumeInfo.boxMin;
 		maxBox=this->volumeInfo.boxMax;
 	}
 
-	decimal ScalarFieldCreator::GetVolumeValue(const SpatialDiscretization::weight_t& volId)
+    double_t ScalarFieldCreator::GetVolumeValue(const SpatialDiscretization::weight_t& volId)
 	{
 		if(volId>=0 && (std::size_t)volId<this->volumeInfo.volumeValue.size())
 		{
-			return (decimal)this->volumeInfo.volumeValue[volId];
+            return this->volumeInfo.volumeValue[volId];
 		}else{
 			return -1.f;
 		}
@@ -120,8 +148,7 @@ namespace ScalarFieldBuilders
 	SpatialDiscretization::weight_t ScalarFieldCreator::GetVolumeCount()
 	{
 		return this->volumeInfo.volumeCount;
-	}
-	//decimal GetVolumeValue(const SpatialDiscretization::weight_t& volId);
+    }
 
 	bool ScalarFieldCreator::IsContainsVol( const ivec2& xyCell, SpatialDiscretization::weight_t& volId)
 	{
@@ -146,7 +173,7 @@ namespace ScalarFieldBuilders
 			maxVolId=MAX(maxVolId,currentCell->GetData());
 		}
 	}
-	typedef std::pair<SpatialDiscretization::weight_t,decimal> listValue_t;
+    typedef std::pair<SpatialDiscretization::weight_t, double_t> listValue_t;
 	int sortFunc(const listValue_t& left,const listValue_t& right)
 	{
 		return left.second>right.second;
@@ -169,7 +196,7 @@ namespace ScalarFieldBuilders
 			return;
 
 		statVolsFile<<"Volume id"<<";value(m^3)"<<std::endl;
-		//On va trier par ordre décroissant de volume
+		//On va trier par ordre dï¿½croissant de volume
 		std::list<listValue_t> volumeList;
 		for(int i=0;i<GetVolumeCount();i++)
 		{
@@ -207,9 +234,9 @@ namespace ScalarFieldBuilders
 
 		using namespace SpatialDiscretization;
 		cell_id_t cell_z=0;
-		for(cell_id_t cell_x=0;cell_x<volumeInfo.cellCount;cell_x++)
+		for(cell_id_t cell_x=0;cell_x<volumeInfo.cellCountXYZ.x;cell_x++)
 		{
-			for(cell_id_t cell_y=0;cell_y<volumeInfo.cellCount;cell_y++)
+			for(cell_id_t cell_y=0;cell_y<volumeInfo.cellCountXYZ.y;cell_y++)
 			{
 				cell_z=0;
 				zcell* currentCell=&((*this->fieldData)[cell_x][cell_y]);
@@ -219,7 +246,7 @@ namespace ScalarFieldBuilders
 					{
 						for(cell_id_t cell_z_offset=0;cell_z_offset<currentCell->GetSize();cell_z_offset++)
 						{
-							vec3 cellCenter=CellIdToCenterCoordinate(ivec3(cell_x,cell_y,cell_z+cell_z_offset),this->volumeInfo.cellSize,this->volumeInfo.zeroCellCenter);
+                            dvec3 cellCenter=CellIdToCenterCoordinate(ivec3(cell_x,cell_y,cell_z+cell_z_offset),this->volumeInfo.cellSize,this->volumeInfo.zeroCellCenter);
 							xyzFile<<cellCenter.x<<" "<<cellCenter.y<<" "<<cellCenter.z<<std::endl;
 						}
 					}
@@ -248,8 +275,8 @@ namespace ScalarFieldBuilders
 		  getline (coordinatesFile,line);
 		  //id X Y Z
 		  int objectIndex;
-		  vec3 coordinate;
-		  sscanf(line.c_str(),"%i %f %f %f",&objectIndex,&(coordinate.x),&(coordinate.y),&(coordinate.z));
+          dvec3 coordinate;
+          sscanf(line.c_str(),"%i %lf %lf %lf",&objectIndex,&(coordinate.x),&(coordinate.y),&(coordinate.z));
 		  ivec3 ijk=this->GetCellIdByCoord(coordinate);
 		  ijkFile<<objectIndex<<" "<<ijk.a<<" "<<ijk.b<<" "<<ijk.c<<" "<<this->GetMatrixValue(ijk)<<std::endl;
 		}
@@ -262,9 +289,9 @@ namespace ScalarFieldBuilders
 	{
 		using namespace SpatialDiscretization;
 		cell_id_t cell_z=0;
- 		for(cell_id_t cell_x=0;cell_x<volumeInfo.cellCount;cell_x++)
+		for(cell_id_t cell_x=0;cell_x<volumeInfo.cellCountXYZ.x;cell_x++)
 		{
-		    for(cell_id_t cell_y=0;cell_y<volumeInfo.cellCount;cell_y++)
+			for(cell_id_t cell_y=0;cell_y<volumeInfo.cellCountXYZ.y;cell_y++)
 			{
 				cell_z=0;
 				zcell* currentCell=&((*this->fieldData)[cell_x][cell_y]);
@@ -274,7 +301,7 @@ namespace ScalarFieldBuilders
 					cell_z+=currentCell->GetSize();
 					currentCell->Next(&currentCell);
 				}
-				if(cell_z!=volumeInfo.cellCount)
+				if(cell_z!=volumeInfo.cellCountXYZ.z)
 					return false;
 			}
 		}
@@ -283,16 +310,16 @@ namespace ScalarFieldBuilders
     void ScalarFieldCreator::GetCellValueBoundaries(ivec3& min,ivec3& max,const SpatialDiscretization::weight_t& volid)
     {
 		using namespace SpatialDiscretization;
-		cell_id_t min_x=volumeInfo.cellCount;
-        cell_id_t min_y=volumeInfo.cellCount;
-        cell_id_t min_z=volumeInfo.cellCount;
+		cell_id_t min_x=volumeInfo.cellCountXYZ.x;
+        cell_id_t min_y=volumeInfo.cellCountXYZ.y;
+        cell_id_t min_z=volumeInfo.cellCountXYZ.z;
         cell_id_t max_x=0;
         cell_id_t max_y=0;
         cell_id_t max_z=0;
         std::size_t cell_z;
- 		for(cell_id_t cell_x=0;cell_x<volumeInfo.cellCount;cell_x++)
+        for(cell_id_t cell_x=0;cell_x<volumeInfo.cellCountXYZ.x;cell_x++)
 		{
-		    for(cell_id_t cell_y=0;cell_y<volumeInfo.cellCount;cell_y++)
+		    for(cell_id_t cell_y=0;cell_y<volumeInfo.cellCountXYZ.y;cell_y++)
 			{
 				cell_z=0;
 				zcell* currentCell=&((*this->fieldData)[cell_x][cell_y]);
@@ -330,17 +357,17 @@ namespace ScalarFieldBuilders
 		cell_id_t cell_z=0;
 
 		// RECHERCHE DES EXTREMAS
-		cell_id_t min_x=volumeInfo.cellCount;
-        cell_id_t min_y=volumeInfo.cellCount;
-        cell_id_t min_z=volumeInfo.cellCount;
+		cell_id_t min_x=volumeInfo.cellCountXYZ.x;
+        cell_id_t min_y=volumeInfo.cellCountXYZ.y;
+        cell_id_t min_z=volumeInfo.cellCountXYZ.z;
         cell_id_t max_x=0;
         cell_id_t max_y=0;
         cell_id_t max_z=0;
 		bool somethingToExport=false;
 		std::cout<<"Establishing volume bounding box"<<std::endl;
- 		for(cell_id_t cell_x=0;cell_x<volumeInfo.cellCount;cell_x++)
+        for(cell_id_t cell_x=0;cell_x<volumeInfo.cellCountXYZ.x;cell_x++)
 		{
-		    for(cell_id_t cell_y=0;cell_y<volumeInfo.cellCount;cell_y++)
+		    for(cell_id_t cell_y=0;cell_y<volumeInfo.cellCountXYZ.y;cell_y++)
 			{
 				cell_z=0;
 				zcell* currentCell=&((*this->fieldData)[cell_x][cell_y]);
@@ -376,11 +403,11 @@ namespace ScalarFieldBuilders
 					min_y--;
 				if(min_z>0)
 					min_z--;
-				if(max_x<volumeInfo.cellCount-1)
+				if(max_x<volumeInfo.cellCountXYZ.x-1)
 					max_x++;
-				if(max_y<volumeInfo.cellCount-1)
+				if(max_y<volumeInfo.cellCountXYZ.y-1)
 					max_y++;
-				if(max_z<volumeInfo.cellCount-1)
+				if(max_z<volumeInfo.cellCountXYZ.z-1)
 					max_z++;
 			}
 
@@ -394,7 +421,7 @@ namespace ScalarFieldBuilders
 			xyzFile<<"ASCII"<<std::endl;
 			xyzFile<<"DATASET STRUCTURED_POINTS"<<std::endl;
 			xyzFile<<"DIMENSIONS "<<(max_x-min_x+1)<<" "<<(max_y-min_y+1)<<" "<<(max_z-min_z+1)<<std::endl;
-			vec3 origin=this->GetCenterCellCoordinates(ivec3(min_x, min_y, min_z));
+            dvec3 origin=this->GetCenterCellCoordinates(ivec3(min_x, min_y, min_z));
 			xyzFile<<"ORIGIN "<<origin.x<<" "<<origin.y<<" "<<origin.z<<std::endl;
 			xyzFile<<"SPACING "<<volumeInfo.cellSize<<" "<<volumeInfo.cellSize<<" "<<volumeInfo.cellSize<<std::endl;
 			xyzFile<<"POINT_DATA "<<(max_x-min_x+1)*(max_y-min_y+1)*(max_z-min_z+1)<<std::endl;
@@ -428,12 +455,12 @@ namespace ScalarFieldBuilders
 	void ScalarFieldCreator::InitExteriorVolumeId()
 	{
 		using namespace SpatialDiscretization;
-		//Pour chaque série Z
-		// La première et dernière série appartiendra au volume 2
+		//Pour chaque sï¿½rie Z
+		// La premiï¿½re et derniï¿½re sï¿½rie appartiendra au volume 2
 		cell_id_t cell_z=0;
-		for(cell_id_t cell_x=0;cell_x<volumeInfo.cellCount;cell_x++)
+		for(cell_id_t cell_x=0;cell_x<volumeInfo.cellCountXYZ.x;cell_x++)
 		{
-			for(cell_id_t cell_y=0;cell_y<volumeInfo.cellCount;cell_y++)
+			for(cell_id_t cell_y=0;cell_y<volumeInfo.cellCountXYZ.y;cell_y++)
 			{
 				zcell* currentCell=&((*this->fieldData)[cell_x][cell_y]);
 
@@ -460,15 +487,15 @@ namespace ScalarFieldBuilders
 		{
 			if(sourceCell->GetData()==volumeId)
 			{
-				//On a trouvé une série de Z correspondant à la valeur à étendre
-				//On navigue jusqu'à la position de la source
+				//On a trouvï¿½ une sï¿½rie de Z correspondant ï¿½ la valeur ï¿½ ï¿½tendre
+				//On navigue jusqu'ï¿½ la position de la source
 				while(destinationZ+destinationCell->GetSize()<sourceZ) //while(destinationZ<sourceZ)
 				{
 					destinationZ+=destinationCell->GetSize();
 					if(!destinationCell->Next(&destinationCell))
 						return modification;
 				}
-				//On affecte à partir de sourceZ jusqu'a sourceZ+sourceCell->GetSize() les noeuds dont la valeur est 0
+				//On affecte ï¿½ partir de sourceZ jusqu'a sourceZ+sourceCell->GetSize() les noeuds dont la valeur est 0
 				//while(destinationZ>= sourceZ || destinationZ+destinationCell->GetSize()<=sourceZ+sourceCell->GetSize())
 				while(true)
 				{
@@ -493,14 +520,14 @@ namespace ScalarFieldBuilders
 		return modification;
 	}
 
-	void ScalarFieldCreator::ComputeVolumesValue(std::vector<decimal>& volumeValue)
+    void ScalarFieldCreator::ComputeVolumesValue(std::vector<double_t>& volumeValue)
 	{
 		using namespace SpatialDiscretization;
-		volumeValue=std::vector<decimal>(this->volumeInfo.volumeCount,0.);
-		decimal cellVolume=pow((decimal)this->volumeInfo.cellSize,(decimal)3.);
-		for(cell_id_t cell_x=0;cell_x<volumeInfo.cellCount;cell_x++)
+        volumeValue=std::vector<double_t>(this->volumeInfo.volumeCount,0.);
+        double_t cellVolume=pow(this->volumeInfo.cellSize, 3.);
+		for(cell_id_t cell_x=0;cell_x<volumeInfo.cellCountXYZ.x;cell_x++)
 		{
-			for(cell_id_t cell_y=0;cell_y<volumeInfo.cellCount;cell_y++)
+			for(cell_id_t cell_y=0;cell_y<volumeInfo.cellCountXYZ.y;cell_y++)
 			{
 				zcell* currentCell=&((*this->fieldData)[cell_x][cell_y]);
 				do
@@ -516,9 +543,9 @@ namespace ScalarFieldBuilders
 	{
 		using namespace SpatialDiscretization;
 		cell_id_t cell_z;
-		for(cell_id_t cell_x=0;cell_x<volumeInfo.cellCount;cell_x++)
+		for(cell_id_t cell_x=0;cell_x<volumeInfo.cellCountXYZ.x;cell_x++)
 		{
-			for(cell_id_t cell_y=0;cell_y<volumeInfo.cellCount;cell_y++)
+			for(cell_id_t cell_y=0;cell_y<volumeInfo.cellCountXYZ.y;cell_y++)
 			{
 				cell_z=0;
 				zcell* currentCell=&((*this->fieldData)[cell_x][cell_y]);
@@ -538,164 +565,227 @@ namespace ScalarFieldBuilders
 		return ivec3();
 	}
 
-	ivec3 ScalarFieldCreator::GetCellIdByCoord(const vec3& position)
+    ivec3 ScalarFieldCreator::GetCellIdByCoord(const dvec3& position)
 	{
-		vec3 tmpvec=((position-this->volumeInfo.mainVolumeCenter)/this->volumeInfo.cellSize);
-		ivec3 halfCellCount(this->volumeInfo.cellCount/2,this->volumeInfo.cellCount/2,this->volumeInfo.cellCount/2);
-		return ivec3((long)floor(tmpvec.x),(long)floor(tmpvec.y),(long)floor(tmpvec.z))+halfCellCount;
-	}
-	void ScalarFieldCreator::ExtandVolume(const SpatialDiscretization::weight_t& volumeId)
-	{
-		long neighLink[4][2]={{0,1},
-							  {1,0},
-		                      {0,-1},
-			                  {-1,0} };
-
-		using namespace SpatialDiscretization;
-		std::size_t sizeOfMatrixXY(this->volumeInfo.cellCount*this->volumeInfo.cellCount);
-		PTR_ARR<bool> cellsToCheck(new bool[sizeOfMatrixXY]); //Matrice X,Y de booléen indiquant les cellules à vérifier dans le cycle courant
-		PTR_ARR<bool> NextCellsToCheck(new bool[sizeOfMatrixXY]); //Matrice X,Y de booléen indiquant les cellules à vérifier lors du prochain cycle.
-		memset(cellsToCheck.get(),1,sizeof(bool)*sizeOfMatrixXY);
-		memset(NextCellsToCheck.get(),0,sizeof(bool)*sizeOfMatrixXY);
-		bool moreCellsToCheck(true); //Si sur un cycle de test aucune cellule ne s'est vu modifié alors le volume volumeId est complétement défini
-		do
-		{
-			moreCellsToCheck=false;
-			cell_id_t cellXY;
-			for(cell_id_t cell_x=0;cell_x<volumeInfo.cellCount;cell_x++)
-			{
-				for(cell_id_t cell_y=0;cell_y<volumeInfo.cellCount;cell_y++)
-				{
-
-					cellXY=At(cell_x,cell_y,this->volumeInfo.cellCount);
-					if(cellsToCheck[cellXY]==true)
-					{
-
-						ivec2 currentid(cell_x,cell_y);
-						/////////////////////////////
-						// En fonction des [2-4] voisins nous allons propager les identifiants de la série.
-						bool destCellUpdated(false);
-						for(unsigned short neigh=0;neigh<4;neigh++)
-						{
-							ivec2 FromXY=ivec2(neighLink[neigh])+currentid;
-							if((unsigned int)FromXY.x>=0 && (unsigned int)FromXY.x<this->volumeInfo.cellCount && (unsigned int)FromXY.y>=0 && (unsigned int)FromXY.y<this->volumeInfo.cellCount)
-							{
-								cell_id_t neighXY=At(FromXY.x,FromXY.y,this->volumeInfo.cellCount);
-								if(CellToCellVolumePropagation(currentid,FromXY,volumeId))
-									destCellUpdated=true;
-							}
-						}
-
-						if(destCellUpdated) //Cellule de destination modifié, toute les cellule voisines doivent être marqué comme à subir une propagation
-						{
-							moreCellsToCheck=true;
-							for(unsigned short neigh=0;neigh<4;neigh++)
-							{
-								ivec2 FromXY=ivec2(neighLink[neigh])+currentid;
-								if((unsigned int)FromXY.x>=0 && (unsigned int)FromXY.x<this->volumeInfo.cellCount && (unsigned int)FromXY.y>=0 && (unsigned int)FromXY.y<this->volumeInfo.cellCount)
-								{
-									cell_id_t neighXY=At(FromXY.x,FromXY.y,this->volumeInfo.cellCount);
-									NextCellsToCheck[neighXY]=true;
-								}
-							}
-						}
-					}
-				}
-			}
-			memcpy(cellsToCheck.get(),NextCellsToCheck.get(),sizeof(bool)*sizeOfMatrixXY);
-			memset(NextCellsToCheck.get(),0,sizeof(bool)*sizeOfMatrixXY);
-		}while(moreCellsToCheck);
+        dvec3 tmpvec=((position-this->volumeInfo.mainVolumeCenter)/this->volumeInfo.cellSize);
+		return ivec3(static_cast<int>(floor(tmpvec.x + this->volumeInfo.cellCountXYZ.x / 2.0)),static_cast<int>(floor(tmpvec.y + this->volumeInfo.cellCountXYZ.y / 2.0)),static_cast<int>(floor(tmpvec.z + this->volumeInfo.cellCountXYZ.z / 2.0)));
 	}
 
-	vec3 ScalarFieldCreator::GetCenterCellCoordinates( const ivec3& cell_id) const
+    void ScalarFieldCreator::ExtandVolume(
+        const SpatialDiscretization::weight_t& volumeId)
+    {
+        using namespace SpatialDiscretization;
+
+        const long nx = this->volumeInfo.cellCountXYZ.x;
+        const long ny = this->volumeInfo.cellCountXYZ.y;
+
+        if (nx <= 0 || ny <= 0)
+            return;
+
+        const long neighLink[4][2] = {
+            {0, 1}, {1, 0}, {0, -1}, {-1, 0}
+        };
+
+        const std::size_t sizeOfMatrixXY =
+            static_cast<std::size_t>(nx) *
+            static_cast<std::size_t>(ny);
+
+        PTR_ARR<bool> cellsToCheck(new bool[sizeOfMatrixXY]);
+        PTR_ARR<bool> nextCellsToCheck(new bool[sizeOfMatrixXY]);
+
+        memset(cellsToCheck.get(), 1, sizeof(bool) * sizeOfMatrixXY);
+        memset(nextCellsToCheck.get(), 0, sizeof(bool) * sizeOfMatrixXY);
+
+        bool moreCellsToCheck = true;
+
+        do
+        {
+            moreCellsToCheck = false;
+
+            for (long cell_x = 0; cell_x < nx; ++cell_x)
+            {
+                for (long cell_y = 0; cell_y < ny; ++cell_y)
+                {
+                    const cell_id_t cellXY =
+                        At(cell_x, cell_y, nx);
+
+                    if (!cellsToCheck[cellXY])
+                        continue;
+
+                    const ivec2 currentid(
+                        static_cast<int>(cell_x),
+                        static_cast<int>(cell_y)
+                    );
+
+                    bool destCellUpdated = false;
+
+                    for (unsigned short neigh = 0; neigh < 4; ++neigh)
+                    {
+                        const long fromX =
+                            cell_x + neighLink[neigh][0];
+                        const long fromY =
+                            cell_y + neighLink[neigh][1];
+
+                        if (fromX < 0 || fromX >= nx ||
+                            fromY < 0 || fromY >= ny)
+                            continue;
+
+                        const ivec2 fromXY(
+                            static_cast<int>(fromX),
+                            static_cast<int>(fromY)
+                        );
+
+                        if (CellToCellVolumePropagation(
+                                currentid, fromXY, volumeId))
+                            destCellUpdated = true;
+                    }
+
+                    if (destCellUpdated)
+                    {
+                        moreCellsToCheck = true;
+
+                        for (unsigned short neigh = 0; neigh < 4; ++neigh)
+                        {
+                            const long fromX =
+                                cell_x + neighLink[neigh][0];
+                            const long fromY =
+                                cell_y + neighLink[neigh][1];
+
+                            if (fromX < 0 || fromX >= nx ||
+                                fromY < 0 || fromY >= ny)
+                                continue;
+
+                            const cell_id_t neighXY =
+                                At(fromX, fromY, nx);
+
+                            nextCellsToCheck[neighXY] = true;
+                        }
+                    }
+                }
+            }
+
+            memcpy(
+                cellsToCheck.get(),
+                nextCellsToCheck.get(),
+                sizeof(bool) * sizeOfMatrixXY
+            );
+            memset(
+                nextCellsToCheck.get(),
+                0,
+                sizeof(bool) * sizeOfMatrixXY
+            );
+
+        } while (moreCellsToCheck);
+    }
+
+    dvec3 ScalarFieldCreator::GetCenterCellCoordinates( const ivec3& cell_id) const
 	{
 		return CellIdToCenterCoordinate(cell_id,this->volumeInfo.cellSize, this->volumeInfo.zeroCellCenter);
 	}
 
-	SpatialDiscretization::weight_t ScalarFieldCreator::GetMatrixValue(const ivec3& index)
+
+    SpatialDiscretization::weight_t ScalarFieldCreator::GetMatrixValue(
+        const ivec3 &index)
+    {
+        if (index.x >= 0 &&
+            index.x < this->volumeInfo.cellCountXYZ.x &&
+            index.y >= 0 &&
+            index.y < this->volumeInfo.cellCountXYZ.y &&
+            index.z >= 0 &&
+            index.z < this->volumeInfo.cellCountXYZ.z)
+        {
+            return (*this->fieldData)[index.x][index.y][index.z];
+        }
+
+        throw std::out_of_range(
+            "Requested index (x: " + std::to_string(index.x) +
+            ", y: " + std::to_string(index.y) +
+            ", z: " + std::to_string(index.z) +
+            ") is out of bounds. Valid dimensions are: " +
+            std::to_string(this->volumeInfo.cellCountXYZ.x) + " x " +
+            std::to_string(this->volumeInfo.cellCountXYZ.y) + " x " +
+            std::to_string(this->volumeInfo.cellCountXYZ.z)
+        );
+    }
+
+	void ScalarFieldCreator::CopyMatrix(SpatialDiscretization::weight_t* data,int ni,int nj,int nk,const ivec3& extractPos)
 	{
-		return (*this->fieldData)[index.x][index.y][index.z];
+		const int sourceXBegin = extractPos.a < 0 ? 0 : extractPos.a;
+		const int sourceYBegin = extractPos.b < 0 ? 0 : extractPos.b;
+		const int sourceZBegin = extractPos.c < 0 ? 0 : extractPos.c;
+
+		const int sourceXEnd = extractPos.a + ni < volumeInfo.cellCountXYZ.x ? extractPos.a + ni : volumeInfo.cellCountXYZ.x;
+		const int sourceYEnd = extractPos.b + nj < volumeInfo.cellCountXYZ.y ? extractPos.b + nj : volumeInfo.cellCountXYZ.y;
+		const int sourceZEnd = extractPos.c + nk < volumeInfo.cellCountXYZ.z ? extractPos.c + nk : volumeInfo.cellCountXYZ.z;
+
+		if (sourceXBegin >= sourceXEnd || sourceYBegin >= sourceYEnd || sourceZBegin >= sourceZEnd)
+		{
+			return;
+		}
+
+		for (int sourceX = sourceXBegin;
+			sourceX < sourceXEnd;
+			++sourceX)
+		{
+			const int destX = sourceX - extractPos.a;
+
+			for (int sourceY = sourceYBegin;
+				sourceY < sourceYEnd;
+				++sourceY)
+			{
+				const int destY = sourceY - extractPos.b;
+
+				for (int sourceZ = sourceZBegin;
+					sourceZ < sourceZEnd;
+					++sourceZ)
+				{
+					const int destZ = sourceZ - extractPos.c;
+					data[cell_addr(destX, destY, destZ, nj, nk)] = (*this->fieldData)[sourceX][sourceY][sourceZ];
+				}
+			}
+		}
 	}
-    void ScalarFieldCreator::CopyMatrix(SpatialDiscretization::weight_t* data,int ni,int nj,int nk,const ivec3& extractPos)
-    {
-        ivec3 extractPosEnd(MIN(ni+extractPos.a,volumeInfo.cellCount),MIN(nj+extractPos.b,volumeInfo.cellCount),MIN(nk+extractPos.c,volumeInfo.cellCount));
-		using namespace SpatialDiscretization;
-		cell_id_t cell_z=0;
-		int i,j,k;
-		for(cell_id_t cell_x=extractPos.a;cell_x<extractPosEnd.a;cell_x++)
+
+	void ScalarFieldCreator::CopyMatrixFiltered(SpatialDiscretization::weight_t* data,int ni,int nj,int nk,const ivec3& extractPos,const SpatialDiscretization::weight_t* data_filter,int nindex)
+	{
+		const int sourceXBegin = extractPos.a < 0 ? 0 : extractPos.a;
+		const int sourceYBegin = extractPos.b < 0 ? 0 : extractPos.b;
+		const int sourceZBegin = extractPos.c < 0 ? 0 : extractPos.c;
+
+		const int sourceXEnd = extractPos.a + ni < volumeInfo.cellCountXYZ.x ? extractPos.a + ni : volumeInfo.cellCountXYZ.x;
+		const int sourceYEnd = extractPos.b + nj < volumeInfo.cellCountXYZ.y ? extractPos.b + nj : volumeInfo.cellCountXYZ.y;
+		const int sourceZEnd = extractPos.c + nk < volumeInfo.cellCountXYZ.z ? extractPos.c + nk : volumeInfo.cellCountXYZ.z;
+
+		if (sourceXBegin >= sourceXEnd || sourceYBegin >= sourceYEnd || sourceZBegin >= sourceZEnd)
 		{
-		    i=cell_x-extractPos.a;
-			for(cell_id_t cell_y=extractPos.b;cell_y<extractPosEnd.b;cell_y++)
+			return;
+		}
+
+		for (int sourceX = sourceXBegin;
+			sourceX < sourceXEnd;
+			++sourceX)
+		{
+			const int destX = sourceX - extractPos.a;
+			for (int sourceY = sourceYBegin;
+				sourceY < sourceYEnd;
+				++sourceY)
 			{
-			    j=cell_y-extractPos.b;
-				cell_z=0;
-				zcell* currentCell=&((*this->fieldData)[cell_x][cell_y]);
-				while(currentCell)
+				const int destY = sourceY - extractPos.b;
+				for (int sourceZ = sourceZBegin;
+					sourceZ < sourceZEnd;
+					++sourceZ)
 				{
-				    //Todo optimize with memset
-				    const SpatialDiscretization::weight_t &cell_data(currentCell->GetData());
-				    std::size_t cellsize=currentCell->GetSize();
-				    if(cell_z+currentCell->GetSize()>extractPos.c)
-				    {
-                        for(cell_id_t cell_z_offset=0;cell_z_offset<cellsize;cell_z_offset++)
-                        {
-                            if(cell_z+cell_z_offset<extractPosEnd.c)
-                            {
-                                k=cell_z+cell_z_offset-extractPos.c;
-                                if(k>=0)
-                                    data[cell_addr(i,j,k,nj,nk)]=cell_data;
-                            }else{
-                                break;
-                                break;
-                            }
-                        }
-				    }
-					cell_z+=currentCell->GetSize();
-					currentCell->Next(&currentCell);
+					const int destZ = sourceZ - extractPos.c;
+					const SpatialDiscretization::weight_t cellData = (*this->fieldData)[sourceX][sourceY][sourceZ];
+					if (cellData >= 0 && cellData < nindex)
+					{
+						data[cell_addr(destX, destY, destZ, nj, nk)] = data_filter[cellData];
+					}
 				}
 			}
 		}
-    }
-    void ScalarFieldCreator::CopyMatrixFiltered(SpatialDiscretization::weight_t* data,int ni,int nj,int nk,const ivec3& extractPos,const SpatialDiscretization::weight_t* data_filter,int nindex )
-    {
-        ivec3 extractPosEnd(MIN(ni+extractPos.a,volumeInfo.cellCount),MIN(nj+extractPos.b,volumeInfo.cellCount),MIN(nk+extractPos.c,volumeInfo.cellCount));
-		using namespace SpatialDiscretization;
-		cell_id_t cell_z=0;
-		int i,j,k;
-		for(cell_id_t cell_x=extractPos.a;cell_x<extractPosEnd.a;cell_x++)
-		{
-		    i=cell_x-extractPos.a;
-			for(cell_id_t cell_y=extractPos.b;cell_y<extractPosEnd.b;cell_y++)
-			{
-			    j=cell_y-extractPos.b;
-				cell_z=0;
-				zcell* currentCell=&((*this->fieldData)[cell_x][cell_y]);
-				while(currentCell)
-				{
-				    //Todo optimize with memset
-				    const SpatialDiscretization::weight_t &cell_data(currentCell->GetData());
-				    std::size_t cellsize=currentCell->GetSize();
-				    if(cell_z+currentCell->GetSize()>extractPos.c)
-				    {
-                        for(cell_id_t cell_z_offset=0;cell_z_offset<cellsize;cell_z_offset++)
-                        {
-                            if(cell_z+cell_z_offset<extractPosEnd.c)
-                            {
-                                k=cell_z+cell_z_offset-extractPos.c;
-                                if(k>=0 && cell_data<nindex)
-                                    data[cell_addr(i,j,k,nj,nk)]=data_filter[cell_data];
-                            }else{
-                                break;
-                                break;
-                            }
-                        }
-				    }
-					cell_z+=currentCell->GetSize();
-					currentCell->Next(&currentCell);
-				}
-			}
-		}
-    }
+	}
+
 	void ScalarFieldCreator::ThirdStep_VolumesCreator()
 	{
 		using namespace SpatialDiscretization;

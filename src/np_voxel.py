@@ -6,7 +6,7 @@ from fastvoxel import ivec3
 ##
 # Use multiple memmap to handle a huge matrix
 def as_long_array(lst):
-    return np.asarray(lst,dtype=np.intp)
+    return np.asarray(lst, dtype=np.intp)
 class np_voxel(object):
     def __init__(self,fastvoxel,shape=None,range_beg=None):
         self._fastvoxel=fastvoxel

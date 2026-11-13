@@ -45,12 +45,13 @@ def run():
             data_filt[elmiavol] = 0  # Set 0 to air
             voxelizator.copy_matrix_filtered(pieceof, minv + fv.ivec3(0, cellid[1], 0), data_filt)
             import matplotlib.pyplot as plt
-            from pylab import show, colorbar
-            p = plt.matshow(np.rot90(pieceof[:, 0, :]), fignum=2, cmap = plt.get_cmap("jet", nbmarkers))
+            from pylab import colorbar
+            p = plt.matshow(np.rot90(pieceof[:, 0, :]), fignum=2, cmap=plt.get_cmap("jet", nbmarkers))
             colorbar(p, ticks=range(nbmarkers))
-            plt.savefig(Path(__file__).resolve().with_name("elmia_slice.png"), dpi=200, bbox_inches="tight")
+            output_file = Path(__file__).resolve().with_name("elmia_slice.png")
+            plt.savefig(output_file, dpi=200, bbox_inches="tight")
             plt.close()
-            print("Voxelized elmia slice saved in {}".format(Path(__file__).resolve().with_name("elmia_slice.png")))
+            print("Voxelized elmia slice saved in {}".format(output_file))
         elif doexportvtk:
             from evtk.hl import imageToVTK
             # Create a matrix to extract only an Y slice of the 3D voxelisation (save lot of memory)

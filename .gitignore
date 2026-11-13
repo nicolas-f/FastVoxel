@@ -13,6 +13,7 @@
 .*.sw[nop]
 .sw[nop]
 *.tmp
+.idea
 
 # Compiled source #
 ###################
@@ -27,6 +28,8 @@
 *.pyd
 *.exp
 *.lib
+_skbuild/
+venv/
 
 # Packages #
 ############
@@ -74,7 +77,7 @@ doc/cdoc/build
 # OS generated files #
 ######################
 .gdb_history
-.DS_Store?
+.DS_Store
 ehthumbs.db
 Icon?
 Thumbs.db

@@ -35,7 +35,7 @@ Matplotlib is additionally required to run the PLY visualization demo.
 
 ## Building and installation
 
-FastVoxel uses CMake and SWIG to compile its C++ extension and generate the Python wrapper.
+FastVoxel uses CMake and SWIG to compile its C++ extension. The Python package is built and installed using pip and the project configuration defined in `pyproject.toml`.
 
 First, create and activate a Python environment:
 
@@ -44,60 +44,22 @@ python3 -m venv .venv
 source .venv/bin/activate
 ```
 
-Install NumPy:
+Install FastVoxel from the project directory:
 
 ```bash
-python -m pip install numpy
+python -m pip install .
 ```
 
-Store the project directory:
+To install the development dependencies, including pytest:
 
 ```bash
-PROJECT_DIR="$PWD"
+python -m pip install ".[dev]"
 ```
 
-Create the build directory :
+Matplotlib is additionally required to run the PLY visualization demo:
 
 ```bash
-mkdir -p "$PROJECT_DIR/build"
-cd "$PROJECT_DIR/build"
-```
-
-Make sure that CMake, SWIG, and a compatible C++ compiler are available on your system.
-
-Configure the project:
-
-```bash
-cmake "$PROJECT_DIR" \
-    -DCMAKE_BUILD_TYPE=Release \
-    -DPYTHON_EXECUTABLE="$(command -v python)" \
-    -DCMAKE_INSTALL_PREFIX="$PROJECT_DIR/install"
-```
-
-Compile the extension:
-
-```bash
-cmake --build . -- -j4
-```
-
-Install FastVoxel Python package:
-
-```bash
-cmake --build . --target install
-```
-
-The installed package is located in the `install/fastvoxel` directory.
-
-Return to the project directory
-
-```bash
-cd "$PROJECT_DIR"
-```
-
-To use this installation, add the installation prefix to `PYTHONPATH`:
-
-```bash
-export PYTHONPATH="$PWD/install:$PYTHONPATH"
+python -m pip install matplotlib
 ```
 
 You can then import FastVoxel from Python:

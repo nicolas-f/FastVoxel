@@ -28,11 +28,15 @@
 #include <cstring>
 #include <stdexcept>
 #include <input_output/progressionInfo.h>
+#include <algorithm>
 namespace ScalarFieldBuilders
 {
-    inline unsigned int cell_addr(int i,int j,int k,int nj,int nk)
+    inline std::size_t cell_addr(long i, long j, long k, long nj, long nk)
     {
-        return k+j*nk+i*nk*nj;
+        return static_cast<std::size_t>(k)
+             + static_cast<std::size_t>(j) * static_cast<std::size_t>(nk)
+             + static_cast<std::size_t>(i) * static_cast<std::size_t>(nj)
+                                         * static_cast<std::size_t>(nk);
     }
 	inline SpatialDiscretization::cell_id_t At(const SpatialDiscretization::cell_id_t& X,const SpatialDiscretization::cell_id_t& Y, const SpatialDiscretization::cell_id_t& Size)
 	{
@@ -89,9 +93,9 @@ namespace ScalarFieldBuilders
     // Center the complete voxel grid on the requested bounding box.
     // zeroCellCenter is the center of voxel (0, 0, 0).
     computedVolumeInfo.zeroCellCenter = computedVolumeInfo.mainVolumeCenter
-										- dvec3((cellCount.x / 2) * minResolution,
-												(cellCount.y / 2) * minResolution,
-												(cellCount.z / 2) * minResolution);
+										- dvec3(((cellCount.x - 1) / 2.0) * minResolution,
+												((cellCount.y - 1) / 2.0) * minResolution,
+												((cellCount.z - 1) / 2.0) * minResolution);
 
     computedVolumeInfo.maximal_marker_index = 0;
 }
@@ -708,79 +712,188 @@ namespace ScalarFieldBuilders
         );
     }
 
-	void ScalarFieldCreator::CopyMatrix(SpatialDiscretization::weight_t* data,int ni,int nj,int nk,const ivec3& extractPos)
+	void ScalarFieldCreator::CopyMatrix(
+		SpatialDiscretization::weight_t* data,
+		int ni,
+		int nj,
+		int nk,
+		const ivec3& extractPos)
 	{
-		const int sourceXBegin = extractPos.a < 0 ? 0 : extractPos.a;
-		const int sourceYBegin = extractPos.b < 0 ? 0 : extractPos.b;
-		const int sourceZBegin = extractPos.c < 0 ? 0 : extractPos.c;
-
-		const int sourceXEnd = extractPos.a + ni < volumeInfo.cellCountXYZ.x ? extractPos.a + ni : volumeInfo.cellCountXYZ.x;
-		const int sourceYEnd = extractPos.b + nj < volumeInfo.cellCountXYZ.y ? extractPos.b + nj : volumeInfo.cellCountXYZ.y;
-		const int sourceZEnd = extractPos.c + nk < volumeInfo.cellCountXYZ.z ? extractPos.c + nk : volumeInfo.cellCountXYZ.z;
-
-		if (sourceXBegin >= sourceXEnd || sourceYBegin >= sourceYEnd || sourceZBegin >= sourceZEnd)
-		{
+		if (!data || ni <= 0 || nj <= 0 || nk <= 0)
 			return;
-		}
 
-		for (int sourceX = sourceXBegin;
-			sourceX < sourceXEnd;
-			++sourceX)
+		const long nx = static_cast<long>(this->volumeInfo.cellCountXYZ.x);
+		const long ny = static_cast<long>(this->volumeInfo.cellCountXYZ.y);
+		const long nz = static_cast<long>(this->volumeInfo.cellCountXYZ.z);
+
+		const long posX = extractPos.a;
+		const long posY = extractPos.b;
+		const long posZ = extractPos.c;
+
+		const long ldim1 = static_cast<long>(ni);
+		const long ldim2 = static_cast<long>(nj);
+		const long ldim3 = static_cast<long>(nk);
+
+		if (posX + ldim1 <= 0 ||
+			posY + ldim2 <= 0 ||
+			posZ + ldim3 <= 0 ||
+			posX >= nx ||
+			posY >= ny ||
+			posZ >= nz)
+			return;
+
+		const long sourceXBegin = std::max(0L, posX);
+		const long sourceXEnd   = std::min(nx, posX + ldim1);
+
+		const long sourceYBegin = std::max(0L, posY);
+		const long sourceYEnd   = std::min(ny, posY + ldim2);
+
+		const long sourceZBegin = std::max(0L, posZ);
+		const long sourceZEnd   = std::min(nz, posZ + ldim3);
+
+		for (long sourceX = sourceXBegin; sourceX < sourceXEnd; ++sourceX)
 		{
-			const int destX = sourceX - extractPos.a;
+			const long destX = sourceX - posX;
 
-			for (int sourceY = sourceYBegin;
-				sourceY < sourceYEnd;
-				++sourceY)
+			auto& columnY =
+				(*this->fieldData)[static_cast<SpatialDiscretization::cell_id_t>(sourceX)];
+
+			for (long sourceY = sourceYBegin; sourceY < sourceYEnd; ++sourceY)
 			{
-				const int destY = sourceY - extractPos.b;
+				const long destY = sourceY - posY;
 
-				for (int sourceZ = sourceZBegin;
-					sourceZ < sourceZEnd;
-					++sourceZ)
+				const std::size_t rowOffset =
+					cell_addr(destX, destY, 0, ldim2, ldim3);
+
+				SpatialDiscretization::zcell* currentCell =
+					&columnY[static_cast<SpatialDiscretization::cell_id_t>(sourceY)];
+
+				long cellZBegin = 0;
+
+				while (currentCell != nullptr && cellZBegin < sourceZEnd)
 				{
-					const int destZ = sourceZ - extractPos.c;
-					data[cell_addr(destX, destY, destZ, nj, nk)] = (*this->fieldData)[sourceX][sourceY][sourceZ];
+					const long cellZEnd =
+						cellZBegin + static_cast<long>(currentCell->GetSize());
+
+					const long overlapBegin = std::max(cellZBegin, sourceZBegin);
+					const long overlapEnd   = std::min(cellZEnd, sourceZEnd);
+
+					if (overlapBegin < overlapEnd)
+					{
+						const std::size_t destZBegin =
+							static_cast<std::size_t>(overlapBegin - posZ);
+
+						const std::size_t count =
+							static_cast<std::size_t>(overlapEnd - overlapBegin);
+
+						std::fill_n(data + rowOffset + destZBegin,
+									count,
+									currentCell->GetData());
+					}
+
+					cellZBegin = cellZEnd;
+
+					SpatialDiscretization::zcell* nextCell = nullptr;
+					const bool hasNext = currentCell->Next(&nextCell);
+					currentCell = hasNext ? nextCell : nullptr;
 				}
 			}
 		}
 	}
 
-	void ScalarFieldCreator::CopyMatrixFiltered(SpatialDiscretization::weight_t* data,int ni,int nj,int nk,const ivec3& extractPos,const SpatialDiscretization::weight_t* data_filter,int nindex)
+	void ScalarFieldCreator::CopyMatrixFiltered(
+		SpatialDiscretization::weight_t* data,
+		int ni,
+		int nj,
+		int nk,
+		const ivec3& extractPos,
+		const SpatialDiscretization::weight_t* data_filter,
+		int nindex)
 	{
-		const int sourceXBegin = extractPos.a < 0 ? 0 : extractPos.a;
-		const int sourceYBegin = extractPos.b < 0 ? 0 : extractPos.b;
-		const int sourceZBegin = extractPos.c < 0 ? 0 : extractPos.c;
-
-		const int sourceXEnd = extractPos.a + ni < volumeInfo.cellCountXYZ.x ? extractPos.a + ni : volumeInfo.cellCountXYZ.x;
-		const int sourceYEnd = extractPos.b + nj < volumeInfo.cellCountXYZ.y ? extractPos.b + nj : volumeInfo.cellCountXYZ.y;
-		const int sourceZEnd = extractPos.c + nk < volumeInfo.cellCountXYZ.z ? extractPos.c + nk : volumeInfo.cellCountXYZ.z;
-
-		if (sourceXBegin >= sourceXEnd || sourceYBegin >= sourceYEnd || sourceZBegin >= sourceZEnd)
-		{
+		if (!data || !data_filter || ni <= 0 || nj <= 0 || nk <= 0 || nindex <= 0)
 			return;
-		}
 
-		for (int sourceX = sourceXBegin;
-			sourceX < sourceXEnd;
-			++sourceX)
+		const long nx = static_cast<long>(this->volumeInfo.cellCountXYZ.x);
+		const long ny = static_cast<long>(this->volumeInfo.cellCountXYZ.y);
+		const long nz = static_cast<long>(this->volumeInfo.cellCountXYZ.z);
+
+		const long posX = extractPos.a;
+		const long posY = extractPos.b;
+		const long posZ = extractPos.c;
+
+		const long ldim1 = static_cast<long>(ni);
+		const long ldim2 = static_cast<long>(nj);
+		const long ldim3 = static_cast<long>(nk);
+
+		if (posX + ldim1 <= 0 ||
+			posY + ldim2 <= 0 ||
+			posZ + ldim3 <= 0 ||
+			posX >= nx ||
+			posY >= ny ||
+			posZ >= nz)
+			return;
+
+		const long sourceXBegin = std::max(0L, posX);
+		const long sourceXEnd   = std::min(nx, posX + ldim1);
+
+		const long sourceYBegin = std::max(0L, posY);
+		const long sourceYEnd   = std::min(ny, posY + ldim2);
+
+		const long sourceZBegin = std::max(0L, posZ);
+		const long sourceZEnd   = std::min(nz, posZ + ldim3);
+
+		for (long sourceX = sourceXBegin; sourceX < sourceXEnd; ++sourceX)
 		{
-			const int destX = sourceX - extractPos.a;
-			for (int sourceY = sourceYBegin;
-				sourceY < sourceYEnd;
-				++sourceY)
+			const long destX = sourceX - posX;
+
+			auto& columnY =
+				(*this->fieldData)[static_cast<SpatialDiscretization::cell_id_t>(sourceX)];
+
+			for (long sourceY = sourceYBegin; sourceY < sourceYEnd; ++sourceY)
 			{
-				const int destY = sourceY - extractPos.b;
-				for (int sourceZ = sourceZBegin;
-					sourceZ < sourceZEnd;
-					++sourceZ)
+				const long destY = sourceY - posY;
+
+				const std::size_t rowOffset =
+					cell_addr(destX, destY, 0, ldim2, ldim3);
+
+				SpatialDiscretization::zcell* currentCell =
+					&columnY[static_cast<SpatialDiscretization::cell_id_t>(sourceY)];
+
+				long cellZBegin = 0;
+
+				while (currentCell != nullptr && cellZBegin < sourceZEnd)
 				{
-					const int destZ = sourceZ - extractPos.c;
-					const SpatialDiscretization::weight_t cellData = (*this->fieldData)[sourceX][sourceY][sourceZ];
-					if (cellData >= 0 && cellData < nindex)
+					const long cellZEnd =
+						cellZBegin + static_cast<long>(currentCell->GetSize());
+
+					const long overlapBegin = std::max(cellZBegin, sourceZBegin);
+					const long overlapEnd   = std::min(cellZEnd, sourceZEnd);
+
+					if (overlapBegin < overlapEnd)
 					{
-						data[cell_addr(destX, destY, destZ, nj, nk)] = data_filter[cellData];
+						const SpatialDiscretization::weight_t cellData =
+							currentCell->GetData();
+
+						if (cellData >= 0 && cellData < nindex)
+						{
+							const std::size_t destZBegin =
+								static_cast<std::size_t>(overlapBegin - posZ);
+
+							const std::size_t count =
+								static_cast<std::size_t>(overlapEnd - overlapBegin);
+
+							std::fill_n(
+								data + rowOffset + destZBegin,
+								count,
+								data_filter[cellData]);
+						}
 					}
+
+					cellZBegin = cellZEnd;
+
+					SpatialDiscretization::zcell* nextCell = nullptr;
+					const bool hasNext = currentCell->Next(&nextCell);
+					currentCell = hasNext ? nextCell : nullptr;
 				}
 			}
 		}

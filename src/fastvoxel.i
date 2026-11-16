@@ -114,6 +114,12 @@ namespace core_mathlib
             }
         }
     };
+%pythoncode %{
+dvec3.x = property(lambda self: self.__getitem__(0))
+dvec3.y = property(lambda self: self.__getitem__(1))
+dvec3.z = property(lambda self: self.__getitem__(2))
+%}
+
     class ivec3
     {
         public:
@@ -153,12 +159,27 @@ namespace core_mathlib
             int __len__() {
                 return 3;
             }
+            long get_x() {
+                return $self->a;
+            }
+            long get_y() {
+                return $self->b;
+            }
+            long get_z() {
+                return $self->c;
+            }
             long __getitem__(const int& ind)
             {
                 return $self->i[ind];
             }
         }
    };
+%pythoncode %{
+ivec3.x = property(ivec3.get_x)
+ivec3.y = property(ivec3.get_y)
+ivec3.z = property(ivec3.get_z)
+%}
+
 };
 namespace ScalarFieldBuilders
 {
@@ -168,7 +189,6 @@ namespace ScalarFieldBuilders
 	{
         public:
             ScalarFieldCreator(const double& resolution);
-            %rename(first_step_params) FirstStep_Params;
             void FirstStep_Params(const dvec3& boxMin,const dvec3& boxMax);
             %rename(third_step_volumescreator) ThirdStep_VolumesCreator;
             void ThirdStep_VolumesCreator();
@@ -199,11 +219,16 @@ namespace ScalarFieldBuilders
     {
         public:
             TriangleScalarFieldCreator(const double& _resolution);
-            %rename(second_step_pushtri) SecondStep_PushTri;
             void SecondStep_PushTri(const dvec3& A,const dvec3& B,const dvec3& C,const short& marker=1);
             %rename(load_ply_model) LoadPlyModel;
             bool LoadPlyModel(const std::string& fileInput);
     };
+%pythoncode %{
+ScalarFieldCreator.first_step_params = ScalarFieldCreator.FirstStep_Params
+TriangleScalarFieldCreator.first_step_params = TriangleScalarFieldCreator.FirstStep_Params
+TriangleScalarFieldCreator.second_step_pushtri = TriangleScalarFieldCreator.SecondStep_PushTri
+%}
+
 };
 
 %pythoncode %{

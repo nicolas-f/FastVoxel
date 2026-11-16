@@ -43,19 +43,11 @@ class TestNpVoxel(unittest.TestCase):
         ]
 
         # Expected result for a slice in the middle of the cube
-        self.expected_res = np.asarray([
-            [100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100],
-            [100, 102, 102, 102, 102, 102, 102, 102, 102, 102, 100],
-            [100, 102, 102, 102, 102, 102, 102, 102, 102, 102, 100],
-            [100, 102, 102, 102, 102, 102, 102, 102, 102, 102, 100],
-            [100, 102, 102, 102, 102, 102, 102, 102, 102, 102, 100],
-            [100, 102, 102, 102, 102, 102, 102, 102, 102, 102, 100],
-            [100, 102, 102, 102, 102, 102, 102, 102, 102, 102, 100],
-            [100, 102, 102, 102, 102, 102, 102, 102, 102, 102, 100],
-            [100, 102, 102, 102, 102, 102, 102, 102, 102, 102, 100],
-            [100, 102, 102, 102, 102, 102, 102, 102, 102, 102, 100],
-            [100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100]
-        ], dtype=np.short)
+        self.expected_res = np.full((10, 10), 102, dtype=np.short)
+        self.expected_res[0, :] = 100
+        self.expected_res[-1, :] = 100
+        self.expected_res[:, 0] = 100
+        self.expected_res[:, -1] = 100
 
     def _create_voxelizator(self):
         """Creates and configures a voxelizator with the test cube"""

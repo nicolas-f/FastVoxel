@@ -44,11 +44,14 @@ namespace ScalarFieldBuilders
 		struct mainVolumeConstruction_t
 		{
 		    mainVolumeConstruction_t()
-		    : cellSize(0.),cellCount(0),volumeCount(0),maximal_marker_index(0)
+			: cellSize(0.), cellCount(0), cellCountXYZ(0, 0, 0), volumeCount(0), maximal_marker_index(0)
             {
             }
             double_t cellSize;
+			// Legacy scalar: maximum of the three grid dimensions.
 			unsigned int cellCount;
+			// Actual rectangular grid dimensions (X, Y, Z).
+            ivec3 cellCountXYZ;
             dvec3 mainVolumeCenter;
             dvec3 cellHalfSize;
             dvec3 zeroCellCenter;
@@ -152,6 +155,7 @@ namespace ScalarFieldBuilders
         void MakeXYZ(const std::string& filename,const double_t& minVol);
 		void ExportVTK(const std::string& filename,const SpatialDiscretization::weight_t& idVol=-1);
 		std::size_t GetDomainSize();
+		ivec3 GetDomainShape();
 		bool CheckDiscretisation();
 		SpatialDiscretization::weight_t GetLargestVolumeId();
 

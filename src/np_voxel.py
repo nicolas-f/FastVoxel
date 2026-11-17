@@ -6,13 +6,13 @@ from fastvoxel import ivec3
 ##
 # Use multiple memmap to handle a huge matrix
 def as_long_array(lst):
-    return np.asarray(lst,dtype=np.long)
+    return np.asarray(lst, dtype=np.intp)
 class np_voxel(object):
     def __init__(self,fastvoxel,shape=None,range_beg=None):
         self._fastvoxel=fastvoxel
         self.dtype=np.short
         if shape is None:
-            shape=(fastvoxel.get_domain_size(),fastvoxel.get_domain_size(),fastvoxel.get_domain_size())
+            shape = tuple(fastvoxel.get_domain_shape())
         self.shape=shape
         if range_beg is None:
             range_beg=(0,0,0)
@@ -35,12 +35,12 @@ class np_voxel(object):
                 get_destination_pos[dim]=range_get[1]
             else:
                 #get only one item
-                has_single=True 
+                has_single=True
                 single_dim[dim]=0
                 get_origin_pos[dim]=key[dim]
                 get_destination_pos[dim]=key[dim]+1
         ret_shape=tuple(list(as_long_array(get_destination_pos)-as_long_array(get_origin_pos)))
-        ret_value=np.empty(shape=ret_shape,dtype=self.dtype)
+        ret_value=np.zeros(shape=ret_shape, dtype=self.dtype)
         vget_origin_pos=ivec3(get_origin_pos[0],get_origin_pos[1],get_origin_pos[2])
         if self._filter is None:
             self._fastvoxel.copy_matrix(ret_value,vget_origin_pos+self._vrange_beg)

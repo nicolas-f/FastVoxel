@@ -29,6 +29,23 @@
 %include "std_string.i"
 %include "typemaps.i"
 %include "numpy.i"
+%exception {
+    try {
+        $action
+    }
+    catch (const std::out_of_range& e) {
+        SWIG_exception_fail(SWIG_IndexError, e.what());
+    }
+    catch (const std::invalid_argument& e) {
+        SWIG_exception_fail(SWIG_ValueError, e.what());
+    }
+    catch (const std::bad_alloc& e) {
+        SWIG_exception_fail(SWIG_MemoryError, e.what());
+    }
+    catch (const std::exception& e) {
+        SWIG_exception_fail(SWIG_RuntimeError, e.what());
+    }
+}
 %init %{
     import_array();
 %}
@@ -97,6 +114,12 @@ namespace core_mathlib
             }
         }
     };
+%pythoncode %{
+dvec3.x = property(lambda self: self.__getitem__(0))
+dvec3.y = property(lambda self: self.__getitem__(1))
+dvec3.z = property(lambda self: self.__getitem__(2))
+%}
+
     class ivec3
     {
         public:
@@ -136,12 +159,27 @@ namespace core_mathlib
             int __len__() {
                 return 3;
             }
+            long get_x() {
+                return $self->a;
+            }
+            long get_y() {
+                return $self->b;
+            }
+            long get_z() {
+                return $self->c;
+            }
             long __getitem__(const int& ind)
             {
                 return $self->i[ind];
             }
         }
    };
+%pythoncode %{
+ivec3.x = property(ivec3.get_x)
+ivec3.y = property(ivec3.get_y)
+ivec3.z = property(ivec3.get_z)
+%}
+
 };
 namespace ScalarFieldBuilders
 {
@@ -151,7 +189,6 @@ namespace ScalarFieldBuilders
 	{
         public:
             ScalarFieldCreator(const double& resolution);
-            %rename(first_step_params) FirstStep_Params;
             void FirstStep_Params(const dvec3& boxMin,const dvec3& boxMax);
             %rename(third_step_volumescreator) ThirdStep_VolumesCreator;
             void ThirdStep_VolumesCreator();
@@ -167,6 +204,8 @@ namespace ScalarFieldBuilders
             short GetMatrixValue(const ivec3& index);
             %rename(get_domain_size) GetDomainSize;
             unsigned int GetDomainSize();
+            %rename(get_domain_shape) GetDomainShape;
+            ivec3 GetDomainShape();
             %rename(copy_matrix) CopyMatrix;
             void CopyMatrix(short* INPLACE_ARRAY3,int DIM1,int DIM2,int DIM3,const ivec3& extractPos);
             %rename(copy_matrix_filtered) CopyMatrixFiltered;
@@ -180,9 +219,35 @@ namespace ScalarFieldBuilders
     {
         public:
             TriangleScalarFieldCreator(const double& _resolution);
-            %rename(second_step_pushtri) SecondStep_PushTri;
             void SecondStep_PushTri(const dvec3& A,const dvec3& B,const dvec3& C,const short& marker=1);
             %rename(load_ply_model) LoadPlyModel;
             bool LoadPlyModel(const std::string& fileInput);
     };
+%pythoncode %{
+ScalarFieldCreator.first_step_params = ScalarFieldCreator.FirstStep_Params
+TriangleScalarFieldCreator.first_step_params = TriangleScalarFieldCreator.FirstStep_Params
+TriangleScalarFieldCreator.second_step_pushtri = TriangleScalarFieldCreator.SecondStep_PushTri
+%}
+
 };
+
+%pythoncode %{
+import operator
+
+def _checked_vec3_getitem(original_getitem):
+    def checked_getitem(self, index):
+        index = operator.index(index)
+
+        if index < 0:
+            index += 3
+
+        if index < 0 or index >= 3:
+            raise IndexError("vec3 index out of range")
+
+        return original_getitem(self, index)
+
+    return checked_getitem
+
+ivec3.__getitem__ = _checked_vec3_getitem(ivec3.__getitem__)
+dvec3.__getitem__ = _checked_vec3_getitem(dvec3.__getitem__)
+%}

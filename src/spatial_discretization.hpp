@@ -44,14 +44,27 @@ namespace SpatialDiscretization {
     const weight_t emptyValue = -1;
 
     struct domainInformation_t {
-        domainInformation_t() : domainSize(0), weight(0) {
+        domainInformation_t() : domainSize(0), domainSizeX(0),
+                                domainSizeY(0), domainSizeZ(0), weight(0) {
         }
 
         domainInformation_t(const cell_id_t &matrixSize, const weight_t &defaultWeight = 0) : domainSize(matrixSize),
-            weight(defaultWeight) {
+            domainSizeX(matrixSize), domainSizeY(matrixSize),
+            domainSizeZ(matrixSize), weight(defaultWeight) {
         }
 
+        domainInformation_t(const cell_id_t &sizeX,
+                            const cell_id_t &sizeY,
+                            const cell_id_t &sizeZ,
+                            const weight_t &defaultWeight = 0): domainSize(sizeZ), domainSizeX(sizeX),
+                                                                domainSizeY(sizeY), domainSizeZ(sizeZ), weight(defaultWeight) {
+        }
+
+        // Legacy name: the length of a compressed Z column.
         cell_id_t domainSize;
+        cell_id_t domainSizeX;
+        cell_id_t domainSizeY;
+        cell_id_t domainSizeZ;
         weight_t weight;
     };
 
@@ -258,22 +271,36 @@ namespace SpatialDiscretization {
         };
 
         CellArray(const domainInformation_t &_DomainInformation) : cellData(PTR_ARR<cellData_t>(
-                                                                       new cellData_t[_DomainInformation.domainSize])),
-                                                                   Size(_DomainInformation.domainSize) {
+                                                                       new cellData_t[_DomainInformation.domainSizeX])),
+                                                                   Size(_DomainInformation.domainSizeX) {
             for (cell_id_t cellId = 0; cellId < Size; cellId++)
-                cellData[cellId].Resize(_DomainInformation.domainSize, _DomainInformation);
+                cellData[cellId].Resize(_DomainInformation.domainSizeY,
+                                        _DomainInformation.domainSizeZ,
+                                        _DomainInformation);
         }
 
         /**
          * Utilisé via la méthode at, si une cellule doit etre créé
          */
-        void Resize(const cell_id_t &cellSize, const domainInformation_t &_DomainInformation) {
+        void Resize(const cell_id_t &cellSize, const cell_id_t &childSize, const domainInformation_t &_DomainInformation) {
             this->Size = cellSize;
             cellData = PTR_ARR<cellData_t>(new cellData_t[this->Size]);
             for (cell_id_t cellId = 0; cellId < Size; cellId++)
-                cellData[cellId].Resize(this->Size, _DomainInformation);
+                cellData[cellId].Resize(childSize, _DomainInformation);
         }
 
+
+        void Resize(const cell_id_t &cellSize,
+                    const domainInformation_t &_DomainInformation) {
+            this->Size = cellSize;
+            cellData = PTR_ARR<cellData_t>(new cellData_t[this->Size]);
+            for (cell_id_t cellId = 0; cellId < Size; cellId++)
+                cellData[cellId].Resize(
+                    _DomainInformation.domainSizeZ,
+                    _DomainInformation);
+        }
+
+        // Preserve the recursive cell-counting API.
         void Count(unsigned int &cnt) {
             for (cell_id_t cellId = 0; cellId < Size; cellId++)
                 cellData[cellId].Count(cnt);

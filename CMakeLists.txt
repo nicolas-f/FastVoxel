@@ -62,8 +62,6 @@ configure_file(src/__init__.py ${CMAKE_CURRENT_BINARY_DIR}/generated/__init__.py
 
 INCLUDE_DIRECTORIES("${PROJECT_SOURCE_DIR}/src")
 
-SET(CMAKE_SWIG_FLAGS "")
-
 SET_SOURCE_FILES_PROPERTIES(src/fastvoxel.i PROPERTIES CPLUSPLUS ON)
 
 swig_add_library(
@@ -85,10 +83,10 @@ endif()
 
 
 if(WIN32)
-    set_property(TARGET fastvoxel PROPERTY SUFFIX "${Python_SOABI}.pyd")
+    set_property(TARGET fastvoxel PROPERTY SUFFIX ".${Python3_SOABI}.pyd")
 else()
     set_property(TARGET fastvoxel
-            PROPERTY SUFFIX "${Python_SOABI}${CMAKE_SHARED_MODULE_SUFFIX}")
+            PROPERTY SUFFIX ".${Python3_SOABI}${CMAKE_SHARED_MODULE_SUFFIX}")
 endif()
 
 target_link_libraries(fastvoxel PRIVATE Python3::Module Python3::NumPy)
@@ -106,4 +104,3 @@ install (FILES
         ${CMAKE_CURRENT_BINARY_DIR}/generated/__init__.py
         src/np_voxel.py
         DESTINATION fastvoxel)
-

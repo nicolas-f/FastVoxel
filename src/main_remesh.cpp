@@ -169,16 +169,21 @@ int MainRemesh(int argc, char* argv[])
 	if(!formatRPLY::CPly::ImportPly(model3D,fileInput) || model3D.modelVertices.size()==0)
 		return -2;
 
-	minBoundingBox=(*model3D.modelVertices.begin());
-    maxBoundingBox=(*model3D.modelVertices.begin());
-    std::vector<dvec3> vertices_vec;
+	const dvec3& firstVertex = *model3D.modelVertices.begin();
+	minBoundingBox = firstVertex;
+	maxBoundingBox = firstVertex;
+	std::vector<dvec3> vertices_vec;
 	vertices_vec.reserve(model3D.modelVertices.size());
-    for(std::list<dvec3>::iterator itvert=model3D.modelVertices.begin();itvert!=model3D.modelVertices.end();itvert++)
-	{
-		MAXVEC(maxBoundingBox,(*itvert));
-		MINVEC(minBoundingBox,(*itvert));
-		vertices_vec.push_back(*itvert);
-	}
+
+	for (std::list<dvec3>::const_iterator itvert=model3D.modelVertices.begin();
+		 itvert != model3D.modelVertices.end();
+		 ++itvert)
+		{
+			const dvec3 vertex(itvert->x, itvert->y, itvert->z);
+			MAXVEC(maxBoundingBox, vertex);
+			MINVEC(minBoundingBox, vertex);
+			vertices_vec.push_back(vertex);
+		}
 	model3D.modelVertices.clear();
 
     if(verbose) {
@@ -198,10 +203,19 @@ int MainRemesh(int argc, char* argv[])
 	ScalarFieldBuilders::TriangleScalarFieldCreator FromTriangleRemesh(precision);
 	FromTriangleRemesh.FirstStep_Params(minBoundingBox,maxBoundingBox);
 
-	std::size_t domainSize(FromTriangleRemesh.GetDomainSize());
-	if(verbose)
-		std::cout<<"Matrix size "<<domainSize<<"x"<<domainSize<<"x"<<domainSize<<" = "<<pow((decimal)domainSize,3)<<" cells max("<<pow((decimal)domainSize,2)<<"min)"<<std::endl;
+	ivec3 domainShape(FromTriangleRemesh.GetDomainShape());
+	const std::size_t nx = static_cast<std::size_t>(domainShape.x);
+	const std::size_t ny = static_cast<std::size_t>(domainShape.y);
+	const std::size_t nz = static_cast<std::size_t>(domainShape.z);
 
+	if (verbose)
+	{
+		std::cout << "Matrix size "
+		          << nx << "x" << ny << "x" << nz
+				  << " = " << nx * ny * nz
+				  << " cells max(" << nx * ny << " per XY layer)"
+				  << std::endl;
+	}
 
 	/////////////////////////////////////////////////////////////
 	//Voxelisation of surfaces

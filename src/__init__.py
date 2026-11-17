@@ -23,6 +23,9 @@ Official repository is https://github.com/nicolas-f/FastVoxel
 # Import SWIG modules
 from .fastvoxel import *
 
+# Backward compatibility with the historical Python API
+vec3 = dvec3
+
 # Configured by cmake
 __version__ = "@CMAKE_PROJECT_VERSION@"
 

@@ -1,6 +1,7 @@
 import fastvoxel as fv
 import numpy as np
 import time
+from pathlib import Path
 
 
 def run():
@@ -13,10 +14,10 @@ def run():
     deb = time.time()
     # Init Voxelisation with precision in meter
     voxelizator = fv.TriangleScalarFieldCreator(resolution)
+    # Polygonal file path
+    ply_file = Path(__file__).resolve().with_name("elmia.ply")
     # Load PLY polygonal file
-
-    if voxelizator.load_ply_model("elmia.ply"):
-
+    if voxelizator.load_ply_model(str(ply_file)):
         print("Process done in %f sec" % (time.time() - deb))
         # Extract the cell i,j,k values corresponding to position in meter (a position in the volume to extract)
         cellid = voxelizator.get_cell_id_by_coord(fv.dvec3(7, -0.5, 1))
@@ -44,11 +45,13 @@ def run():
             data_filt[elmiavol] = 0  # Set 0 to air
             voxelizator.copy_matrix_filtered(pieceof, minv + fv.ivec3(0, cellid[1], 0), data_filt)
             import matplotlib.pyplot as plt
-            from matplotlib import cm
-            from pylab import show, colorbar
-            p = plt.matshow(np.rot90(pieceof[:, 0, :]), fignum=2, cmap=cm.get_cmap('jet', nbmarkers))
+            from pylab import colorbar
+            p = plt.matshow(np.rot90(pieceof[:, 0, :]), fignum=2, cmap=plt.get_cmap("jet", nbmarkers))
             colorbar(p, ticks=range(nbmarkers))
-            show()
+            output_file = Path(__file__).resolve().with_name("elmia_slice.png")
+            plt.savefig(output_file, dpi=200, bbox_inches="tight")
+            plt.close()
+            print("Voxelized elmia slice saved in {}".format(output_file))
         elif doexportvtk:
             from evtk.hl import imageToVTK
             # Create a matrix to extract only an Y slice of the 3D voxelisation (save lot of memory)

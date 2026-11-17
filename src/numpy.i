@@ -278,9 +278,12 @@ void free_cap(PyObject * cap)
    * and return the pointer.
    */
   PyArrayObject* make_fortran(PyArrayObject* ary,
-                              int*           is_new_object)
+                              int* is_new_object,
+                              int min_dims,
+                              int max_dims)
   {
     PyArrayObject* result;
+
     if (array_is_fortran(ary))
     {
       result = ary;
@@ -288,16 +291,13 @@ void free_cap(PyObject * cap)
     }
     else
     {
-      Py_INCREF(array_descr(ary));
-      result = (PyArrayObject*) PyArray_FromArray(ary,
-                                                  array_descr(ary),
-%#if NPY_API_VERSION < NPY_1_7_API_VERSION
-                                                  NPY_FORTRANORDER);
-%#else
-                                                  NPY_ARRAY_F_CONTIGUOUS);
-%#endif
+      result = (PyArrayObject*) PyArray_NewCopy(ary, NPY_FORTRANORDER);
+      if (!result)
+        return NULL;
+
       *is_new_object = 1;
     }
+
     return result;
   }
 
@@ -346,7 +346,7 @@ void free_cap(PyObject * cap)
                                                         &is_new1);
     if (ary1)
     {
-      ary2 = make_fortran(ary1, &is_new2);
+      ary2 = make_fortran(ary1, &is_new2, 0, 0);
       if (is_new1 && is_new2)
       {
         Py_DECREF(ary1);
@@ -528,24 +528,13 @@ void free_cap(PyObject * cap)
    */
   int require_fortran(PyArrayObject* ary)
   {
-    int success = 1;
-    int nd = array_numdims(ary);
-    int i;
-    npy_intp * strides = array_strides(ary);
-    if (array_is_fortran(ary)) return success;
-    int n_non_one = 0;
-    /* Set the Fortran ordered flag */
-    const npy_intp *dims = array_dimensions(ary);
-    for (i=0; i < nd; ++i)
-      n_non_one += (dims[i] != 1) ? 1 : 0;
-    if (n_non_one > 1)
-      array_clearflags(ary,NPY_ARRAY_CARRAY);
-    array_enableflags(ary,NPY_ARRAY_FARRAY);
-    /* Recompute the strides */
-    strides[0] = strides[nd-1];
-    for (i=1; i < nd; ++i)
-      strides[i] = strides[i-1] * array_size(ary,i-1);
-    return success;
+    if (array_is_fortran(ary))
+      return 1;
+    PyErr_SetString(
+        PyExc_TypeError,
+        "Array must be Fortran-contiguous."
+    );
+    return 0;
   }
 }
 
@@ -930,9 +919,7 @@ void free_cap(PyObject * cap)
   (PyArrayObject* array=NULL, int is_new_object=0)
 {
   npy_intp size[2] = { -1, -1 };
-  array = obj_to_array_fortran_allow_conversion($input,
-                                                   DATA_TYPECODE,
-                                                   &is_new_object);
+  array = obj_to_array_fortran_allow_conversion($input, DATA_TYPECODE, &is_new_object);
   if (!array || !require_dimensions(array, 2) ||
       !require_size(array, size, 2) || !require_fortran(array)) SWIG_fail;
   $1 = (DIM_TYPE) array_size(array,0);
@@ -1136,7 +1123,7 @@ void free_cap(PyObject * cap)
   array = obj_to_array_fortran_allow_conversion($input, DATA_TYPECODE,
                                                 &is_new_object);
   if (!array || !require_dimensions(array, 3) ||
-      !require_size(array, size, 3) | !require_fortran(array)) SWIG_fail;
+      !require_size(array, size, 3) || !require_fortran(array)) SWIG_fail;
   $1 = (DATA_TYPE*) array_data(array);
   $2 = (DIM_TYPE) array_size(array,0);
   $3 = (DIM_TYPE) array_size(array,1);
@@ -1164,9 +1151,7 @@ void free_cap(PyObject * cap)
   (PyArrayObject* array=NULL, int is_new_object=0)
 {
   npy_intp size[3] = { -1, -1, -1 };
-  array = obj_to_array_fortran_allow_conversion($input,
-                                                   DATA_TYPECODE,
-                                                   &is_new_object);
+  array = obj_to_array_fortran_allow_conversion($input, DATA_TYPECODE, &is_new_object);
   if (!array || !require_dimensions(array, 3) ||
       !require_size(array, size, 3) || !require_fortran(array)) SWIG_fail;
   $1 = (DIM_TYPE) array_size(array,0);
@@ -1525,8 +1510,8 @@ void free_cap(PyObject * cap)
   (PyArrayObject* array=NULL)
 {
   array = obj_to_array_no_conversion($input, DATA_TYPECODE);
-  if (!array || !require_dimensions(array,2) || !require_contiguous(array)
-      || !require_native(array)) SWIG_fail;
+  if (!array || !require_dimensions(array,2) ||
+      !require_native(array) || !require_fortran(array)) SWIG_fail;
   $1 = (DATA_TYPE*) array_data(array);
   $2 = (DIM_TYPE) array_size(array,0);
   $3 = (DIM_TYPE) array_size(array,1);
@@ -1547,8 +1532,8 @@ void free_cap(PyObject * cap)
   (PyArrayObject* array=NULL)
 {
   array = obj_to_array_no_conversion($input, DATA_TYPECODE);
-  if (!array || !require_dimensions(array,2) || !require_contiguous(array) ||
-      !require_native(array)) SWIG_fail;
+  if (!array || !require_dimensions(array,2) ||
+      !require_native(array) || !require_fortran(array)) SWIG_fail;
   $1 = (DIM_TYPE) array_size(array,0);
   $2 = (DIM_TYPE) array_size(array,1);
   $3 = (DATA_TYPE*) array_data(array);
@@ -1569,8 +1554,8 @@ void free_cap(PyObject * cap)
   (PyArrayObject* array=NULL)
 {
   array = obj_to_array_no_conversion($input, DATA_TYPECODE);
-  if (!array || !require_dimensions(array,2) || !require_contiguous(array)
-      || !require_native(array) || !require_fortran(array)) SWIG_fail;
+  if (!array || !require_dimensions(array,2) ||
+      !require_native(array) || !require_fortran(array)) SWIG_fail;
   $1 = (DATA_TYPE*) array_data(array);
   $2 = (DIM_TYPE) array_size(array,0);
   $3 = (DIM_TYPE) array_size(array,1);
@@ -1591,7 +1576,7 @@ void free_cap(PyObject * cap)
   (PyArrayObject* array=NULL)
 {
   array = obj_to_array_no_conversion($input, DATA_TYPECODE);
-  if (!array || !require_dimensions(array,2) || !require_contiguous(array) ||
+  if (!array || !require_dimensions(array,2) ||
       !require_native(array) || !require_fortran(array)) SWIG_fail;
   $1 = (DIM_TYPE) array_size(array,0);
   $2 = (DIM_TYPE) array_size(array,1);
@@ -1749,7 +1734,7 @@ void free_cap(PyObject * cap)
   (PyArrayObject* array=NULL)
 {
   array = obj_to_array_no_conversion($input, DATA_TYPECODE);
-  if (!array || !require_dimensions(array,3) || !require_contiguous(array) ||
+  if (!array || !require_dimensions(array,3) ||
       !require_native(array) || !require_fortran(array)) SWIG_fail;
   $1 = (DATA_TYPE*) array_data(array);
   $2 = (DIM_TYPE) array_size(array,0);
@@ -1773,8 +1758,8 @@ void free_cap(PyObject * cap)
   (PyArrayObject* array=NULL)
 {
   array = obj_to_array_no_conversion($input, DATA_TYPECODE);
-  if (!array || !require_dimensions(array,3) || !require_contiguous(array)
-      || !require_native(array) || !require_fortran(array)) SWIG_fail;
+  if (!array || !require_dimensions(array,3) ||
+      !require_native(array) || !require_fortran(array)) SWIG_fail;
   $1 = (DIM_TYPE) array_size(array,0);
   $2 = (DIM_TYPE) array_size(array,1);
   $3 = (DIM_TYPE) array_size(array,2);
@@ -1936,7 +1921,7 @@ void free_cap(PyObject * cap)
   (PyArrayObject* array=NULL)
 {
   array = obj_to_array_no_conversion($input, DATA_TYPECODE);
-  if (!array || !require_dimensions(array,4) || !require_contiguous(array) ||
+  if (!array || !require_dimensions(array,4) ||
       !require_native(array) || !require_fortran(array)) SWIG_fail;
   $1 = (DATA_TYPE*) array_data(array);
   $2 = (DIM_TYPE) array_size(array,0);
@@ -1961,8 +1946,8 @@ void free_cap(PyObject * cap)
   (PyArrayObject* array=NULL)
 {
   array = obj_to_array_no_conversion($input, DATA_TYPECODE);
-  if (!array || !require_dimensions(array,4) || !require_contiguous(array)
-      || !require_native(array) || !require_fortran(array)) SWIG_fail;
+  if (!array || !require_dimensions(array,4) ||
+      !require_native(array) || !require_fortran(array)) SWIG_fail;
   $1 = (DIM_TYPE) array_size(array,0);
   $2 = (DIM_TYPE) array_size(array,1);
   $3 = (DIM_TYPE) array_size(array,2);
@@ -2209,11 +2194,25 @@ void free_cap(PyObject * cap)
   (DATA_TYPE** ARGOUTVIEW_FARRAY2, DIM_TYPE* DIM1, DIM_TYPE* DIM2)
 {
   npy_intp dims[2] = { *$2, *$3 };
-  PyObject* obj = PyArray_SimpleNewFromData(2, dims, DATA_TYPECODE, (void*)(*$1));
-  PyArrayObject* array = (PyArrayObject*) obj;
-
-  if (!array || !require_fortran(array)) SWIG_fail;
-  $result = SWIG_AppendOutput($result,obj);
+  PyArray_Descr *descr = PyArray_DescrFromType(DATA_TYPECODE);
+  if (!descr) SWIG_fail;
+  npy_intp itemsize = PyDataType_ELSIZE(descr);
+  npy_intp strides[2] = {
+    itemsize,
+    itemsize * dims[0]
+  };
+  PyObject *obj = PyArray_NewFromDescr(
+      &PyArray_Type,
+      descr,
+      2,
+      dims,
+      strides,
+      (void*)(*$1),
+      NPY_ARRAY_F_CONTIGUOUS | NPY_ARRAY_WRITEABLE,
+      NULL
+  );
+  if (!obj) SWIG_fail;
+  $result = SWIG_Python_AppendOutput($result, obj);
 }
 
 /* Typemap suite for (DIM_TYPE* DIM1, DIM_TYPE* DIM2, DATA_TYPE** ARGOUTVIEW_FARRAY2)
@@ -2231,11 +2230,25 @@ void free_cap(PyObject * cap)
   (DIM_TYPE* DIM1, DIM_TYPE* DIM2, DATA_TYPE** ARGOUTVIEW_FARRAY2)
 {
   npy_intp dims[2] = { *$1, *$2 };
-  PyObject* obj = PyArray_SimpleNewFromData(2, dims, DATA_TYPECODE, (void*)(*$3));
-  PyArrayObject* array = (PyArrayObject*) obj;
-
-  if (!array || !require_fortran(array)) SWIG_fail;
-  $result = SWIG_AppendOutput($result,obj);
+  PyArray_Descr *descr = PyArray_DescrFromType(DATA_TYPECODE);
+  if (!descr) SWIG_fail;
+  npy_intp itemsize = PyDataType_ELSIZE(descr);
+  npy_intp strides[2] = {
+    itemsize,
+    itemsize * dims[0]
+  };
+  PyObject *obj = PyArray_NewFromDescr(
+      &PyArray_Type,
+      descr,
+      2,
+      dims,
+      strides,
+      (void*)(*$3),
+      NPY_ARRAY_F_CONTIGUOUS | NPY_ARRAY_WRITEABLE,
+      NULL
+  );
+  if (!obj) SWIG_fail;
+  $result = SWIG_Python_AppendOutput($result, obj);
 }
 
 /* Typemap suite for (DATA_TYPE** ARGOUTVIEW_ARRAY3, DIM_TYPE* DIM1, DIM_TYPE* DIM2,
@@ -2252,10 +2265,10 @@ void free_cap(PyObject * cap)
 }
 %typemap(argout,
          fragment="NumPy_Backward_Compatibility")
-  (DATA_TYPE** ARGOUTVIEW_ARRAY3, DIM_TYPE* DIM1, DIM_TYPE* DIM2, DIM_TYPE* DIM3)
+  (DIM_TYPE* DIM1, DIM_TYPE* DIM2, DIM_TYPE* DIM3, DATA_TYPE** ARGOUTVIEW_ARRAY3)
 {
-  npy_intp dims[3] = { *$2, *$3, *$4 };
-  PyObject* obj = PyArray_SimpleNewFromData(3, dims, DATA_TYPECODE, (void*)(*$1));
+  npy_intp dims[3] = { *$1, *$2, *$3 };
+  PyObject* obj = PyArray_SimpleNewFromData(3, dims, DATA_TYPECODE, (void*)(*$4));
   PyArrayObject* array = (PyArrayObject*) obj;
 
   if (!array) SWIG_fail;
@@ -2275,19 +2288,33 @@ void free_cap(PyObject * cap)
   $4 = &data_temp;
 }
 %typemap(argout,
-         fragment="NumPy_Backward_Compatibility")
-  (DIM_TYPE* DIM1, DIM_TYPE* DIM2, DIM_TYPE* DIM3, DATA_TYPE** ARGOUTVIEW_ARRAY3)
+         fragment="NumPy_Backward_Compatibility,NumPy_Array_Requirements")
+  (DATA_TYPE** ARGOUTVIEW_FARRAY3, DIM_TYPE* DIM1, DIM_TYPE* DIM2, DIM_TYPE* DIM3)
 {
-  npy_intp dims[3] = { *$1, *$2, *$3 };
-  PyObject* obj = PyArray_SimpleNewFromData(3, dims, DATA_TYPECODE, (void*)(*$4));
-  PyArrayObject* array = (PyArrayObject*) obj;
-
-  if (!array) SWIG_fail;
-  $result = SWIG_AppendOutput($result,obj);
+  npy_intp dims[3] = { *$2, *$3, *$4 };
+  PyArray_Descr *descr = PyArray_DescrFromType(DATA_TYPECODE);
+  if (!descr) SWIG_fail;
+  npy_intp itemsize = PyDataType_ELSIZE(descr);
+  npy_intp strides[3] = {
+    itemsize,
+    itemsize * dims[0],
+    itemsize * dims[0] * dims[1]
+  };
+  PyObject *obj = PyArray_NewFromDescr(
+      &PyArray_Type,
+      descr,
+      3,
+      dims,
+      strides,
+      (void*)(*$1),
+      NPY_ARRAY_F_CONTIGUOUS | NPY_ARRAY_WRITEABLE,
+      NULL
+  );
+  if (!obj) SWIG_fail;
+  $result = SWIG_Python_AppendOutput($result, obj);
 }
 
-/* Typemap suite for (DATA_TYPE** ARGOUTVIEW_FARRAY3, DIM_TYPE* DIM1, DIM_TYPE* DIM2,
-                      DIM_TYPE* DIM3)
+/* Typemap suite for (DATA_TYPE** ARGOUTVIEW_FARRAY3, DIM_TYPE* DIM1, DIM_TYPE* DIM2, DIM_TYPE* DIM3)
  */
 %typemap(in,numinputs=0)
   (DATA_TYPE** ARGOUTVIEW_FARRAY3, DIM_TYPE* DIM1    , DIM_TYPE* DIM2    , DIM_TYPE* DIM3    )
@@ -2300,14 +2327,29 @@ void free_cap(PyObject * cap)
 }
 %typemap(argout,
          fragment="NumPy_Backward_Compatibility,NumPy_Array_Requirements")
-  (DATA_TYPE** ARGOUTVIEW_FARRAY3, DIM_TYPE* DIM1, DIM_TYPE* DIM2, DIM_TYPE* DIM3)
+  (DIM_TYPE* DIM1, DIM_TYPE* DIM2, DIM_TYPE* DIM3, DATA_TYPE** ARGOUTVIEW_FARRAY3)
 {
-  npy_intp dims[3] = { *$2, *$3, *$4 };
-  PyObject* obj = PyArray_SimpleNewFromData(3, dims, DATA_TYPECODE, (void*)(*$1));
-  PyArrayObject* array = (PyArrayObject*) obj;
-
-  if (!array || !require_fortran(array)) SWIG_fail;
-  $result = SWIG_AppendOutput($result,obj);
+  npy_intp dims[3] = { *$1, *$2, *$3 };
+  PyArray_Descr *descr = PyArray_DescrFromType(DATA_TYPECODE);
+  if (!descr) SWIG_fail;
+  npy_intp itemsize = PyDataType_ELSIZE(descr);
+  npy_intp strides[3] = {
+    itemsize,
+    itemsize * dims[0],
+    itemsize * dims[0] * dims[1]
+  };
+  PyObject *obj = PyArray_NewFromDescr(
+      &PyArray_Type,
+      descr,
+      3,
+      dims,
+      strides,
+      (void*)(*$4),
+      NPY_ARRAY_F_CONTIGUOUS | NPY_ARRAY_WRITEABLE,
+      NULL
+  );
+  if (!obj) SWIG_fail;
+  $result = SWIG_Python_AppendOutput($result, obj);
 }
 
 /* Typemap suite for (DIM_TYPE* DIM1, DIM_TYPE* DIM2, DIM_TYPE* DIM3,
@@ -2327,11 +2369,26 @@ void free_cap(PyObject * cap)
   (DIM_TYPE* DIM1, DIM_TYPE* DIM2, DIM_TYPE* DIM3, DATA_TYPE** ARGOUTVIEW_FARRAY3)
 {
   npy_intp dims[3] = { *$1, *$2, *$3 };
-  PyObject* obj = PyArray_SimpleNewFromData(3, dims, DATA_TYPECODE, (void*)(*$4));
-  PyArrayObject* array = (PyArrayObject*) obj;
-
-  if (!array || !require_fortran(array)) SWIG_fail;
-  $result = SWIG_AppendOutput($result,obj);
+  PyArray_Descr *descr = PyArray_DescrFromType(DATA_TYPECODE);
+  if (!descr) SWIG_fail;
+  npy_intp itemsize = PyDataType_ELSIZE(descr);
+  npy_intp strides[3] = {
+    itemsize,
+    itemsize * dims[0],
+    itemsize * dims[0] * dims[1]
+  };
+  PyObject *obj = PyArray_NewFromDescr(
+      &PyArray_Type,
+      descr,
+      3,
+      dims,
+      strides,
+      (void*)(*$4),
+      NPY_ARRAY_F_CONTIGUOUS | NPY_ARRAY_WRITEABLE,
+      NULL
+  );
+  if (!obj) SWIG_fail;
+  $result = SWIG_Python_AppendOutput($result, obj);
 }
 
 /* Typemap suite for (DATA_TYPE** ARGOUTVIEW_ARRAY4, DIM_TYPE* DIM1, DIM_TYPE* DIM2,

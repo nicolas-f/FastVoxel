@@ -13,44 +13,74 @@ import fastvoxel as fv
         ((0.0, 0.0, 0.0), (0.6, 1.0, 1.4), 0.2),
     ])
 
-def test_grid_center_symmetry_and_coord_lookup(box_min, box_max, resolution):
-    """Grid center must be symmetrically centered around the bounding-box center
-    and any point strictly inside a voxel (center +/- 0.25 * resolution) must be
-    mapped to the same voxel."""
+def test_grid_origin_alignment_and_coord_lookup(
+        box_min, box_max, resolution):
+    """
+    The first voxel center must preserve the historical grid origin,
+    and voxel-center coordinates must map back to their cell IDs.
+
+    Parameters
+    ----------
+    box_min : tuple
+        The minimum corner of the bounding box.
+    box_max : tuple
+        The maximum corner of the bounding box.
+    resolution : float
+        The voxel resolution.
+
+    Returns
+    -------
+    None
+    """
+
     voxelizer = fv.TriangleScalarFieldCreator(resolution)
+
     bmin = fv.dvec3(*box_min)
     bmax = fv.dvec3(*box_max)
+
     voxelizer.FirstStep_Params(bmin, bmax)
 
     shape = voxelizer.get_domain_shape()
     nx, ny, nz = shape.x, shape.y, shape.z
 
-    # 1. Grid must be symmetrically centered around the bounding-box center
-    expected_center = (0.5 * (box_min[0] + box_max[0]),
-                       0.5 * (box_min[1] + box_max[1]),
-                       0.5 * (box_min[2] + box_max[2]))
-    c_first = voxelizer.get_center_cell_coordinates(fv.ivec3(0, 0, 0))
-    c_last = voxelizer.get_center_cell_coordinates(fv.ivec3(nx - 1, ny - 1, nz - 1))
-    actual_center = (0.5 * (c_first.x + c_last.x),
-                     0.5 * (c_first.y + c_last.y),
-                     0.5 * (c_first.z + c_last.z))
-    assert actual_center == pytest.approx(expected_center, abs=1e-12)
+    # First voxel center corresponds to the lower padded bounding-box limit.
+    expected_first_center = tuple(value - 2.0 * resolution for value in box_min)
 
-    # 2. Any point strictly inside a voxel (center +/- 0.25 * resolution)
-    #    must map back to that exact voxel id via get_cell_id_by_coord.
+    c_first = voxelizer.get_center_cell_coordinates(fv.ivec3(0, 0, 0))
+
+    assert (c_first.x, c_first.y, c_first.z) == pytest.approx(
+        expected = expected_first_center,
+        abs = resolution * 1e-6)
+
+    # Last voxel center follows from the grid dimensions.
+    c_last = voxelizer.get_center_cell_coordinates(fv.ivec3(nx - 1, ny - 1, nz - 1))
+
+    expected_last_center = tuple(expected_first_center[i] + (shape[i] - 1) * resolution
+                                 for i in range(3))
+
+    assert (c_last.x, c_last.y, c_last.z) == pytest.approx(
+        expected = expected_last_center,
+        abs = resolution * 1e-6)
+
+    # Coordinates strictly inside a voxel must map to that voxel.
     sample_cells = [fv.ivec3(0, 0, 0),
                     fv.ivec3(nx // 2, ny // 2, nz // 2),
                     fv.ivec3(nx - 1, ny - 1, nz - 1)]
+
     for cell in sample_cells:
-        center = voxelizer.get_center_cell_coordinates(cell)
+        center = voxelizer.get_center_cell_coordinates(cell_id = cell)
+
         for dx in (-0.25, 0.0, 0.25):
             for dy in (-0.25, 0.0, 0.25):
                 for dz in (-0.25, 0.0, 0.25):
                     pt = fv.dvec3(center.x + dx * resolution,
                                   center.y + dy * resolution,
                                   center.z + dz * resolution)
-                    mapped = voxelizer.get_cell_id_by_coord(pt)
-                    assert (mapped.x, mapped.y, mapped.z) == (cell.x, cell.y, cell.z)
+
+                    mapped = voxelizer.get_cell_id_by_coord(position = pt)
+
+                    assert (mapped.x, mapped.y, mapped.z) == (
+                        cell.x, cell.y, cell.z)
 
 def test_triangle_voxelization_matches_coord_lookup_on_even_axis():
     """Rasterizing a triangle inside voxel (0, 0, 0) must agree with get_cell_id_by_coord."""

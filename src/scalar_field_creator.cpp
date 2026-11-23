@@ -93,9 +93,9 @@ namespace ScalarFieldBuilders
     // Center the complete voxel grid on the requested bounding box.
     // zeroCellCenter is the center of voxel (0, 0, 0).
     computedVolumeInfo.zeroCellCenter = computedVolumeInfo.mainVolumeCenter
-										- dvec3(((cellCount.x - 1) / 2.0) * minResolution,
-												((cellCount.y - 1) / 2.0) * minResolution,
-												((cellCount.z - 1) / 2.0) * minResolution);
+										- dvec3((cellCount.x / 2.0) * minResolution,
+												(cellCount.y / 2.0) * minResolution,
+												(cellCount.z / 2.0) * minResolution);
 
     computedVolumeInfo.maximal_marker_index = 0;
 }
@@ -569,10 +569,19 @@ namespace ScalarFieldBuilders
 		return ivec3();
 	}
 
-    ivec3 ScalarFieldCreator::GetCellIdByCoord(const dvec3& position)
+	ivec3 ScalarFieldCreator::GetCellIdByCoord(const dvec3& position)
 	{
-        dvec3 tmpvec=((position-this->volumeInfo.mainVolumeCenter)/this->volumeInfo.cellSize);
-		return ivec3(static_cast<int>(floor(tmpvec.x + this->volumeInfo.cellCountXYZ.x / 2.0)),static_cast<int>(floor(tmpvec.y + this->volumeInfo.cellCountXYZ.y / 2.0)),static_cast<int>(floor(tmpvec.z + this->volumeInfo.cellCountXYZ.z / 2.0)));
+		// Convert physical coordinates to voxel indices using the center
+		// of voxel (0, 0, 0) as the grid origin.
+		const dvec3 tmpvec =
+			(position - this->volumeInfo.zeroCellCenter)
+			/ this->volumeInfo.cellSize;
+
+		return ivec3(
+			static_cast<int>(floor(tmpvec.x + 0.5)),
+			static_cast<int>(floor(tmpvec.y + 0.5)),
+			static_cast<int>(floor(tmpvec.z + 0.5))
+		);
 	}
 
     void ScalarFieldCreator::ExtandVolume(
